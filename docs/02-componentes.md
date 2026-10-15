@@ -69,6 +69,14 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
 
    Em contrapartida, os componentes nas extremidades da arquitetura — como `maintenance_orders`, `fleet_redistribution`, `reporting_audit` e `history_reader` — apresentam uma instabilidade máxima ($I = 1.0$). Como não possuem dependências de entrada diretas ($Ca = 0$), funcionam como módulos periféricos flexíveis que podem ser alterados ou refatorizados sem colocar em risco o núcleo transacional do sistema.
 
+# Conascência - nivel de dependencias 
+
+1. **`sensor_ingestion` e `station_availability`:** 
+   A bicicleta elétrica envia pacotes de coordenadas GPS a cada 30 segundos. Se o `telemetry_ingestion` enviar a localização num formato de tuplo (latitude, longitude) em graus, o `station_availability` tem de assumir exatamente a mesma convenção para calcular se a bicicleta está dentro do raio de uma estação. Se um mudar a ordem para (longitude, latitude), o mapa fica completamente desconfigurado. 
+
+2. **`dock_access` e `trip_lifecycle`:** 
+   A doca física envia um evento quando a bicicleta é bloqueada. Ambos têm de partilhar a convenção do que significa "sucesso", por exemplo, o código de estado lock_status: 1 ou a string "LOCKED". 
+   Se o dock_access mudar o valor para "ENGAGED" e o trip_lifecycle continuar à espera de "LOCKED", o sistema nunca encerra a viagem e o utilizador fica a pagar para sempre.
 
 # Exemplos de Acoplamento Temporal
 
@@ -82,8 +90,8 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
 
    Numa fase inicial, a aplicação estrita da decomposição por Ações por Ator conduziu a uma fragmentação excessiva, gerando uma proliferação de micro-componentes periféricos e sobrepostos (como bike_availability, endTime_notification, route_reader, etc.). Esta granularidade extrema violava criava um acoplamento eferente excessivamente complexo e difícil de manter, tendo cada componente ter de chamar vários componentes para executar as suas funções
 
-   Ação Tomada:
+   **Ação Tomada:**
    Procedeu-se a uma iteração de reestruturação e consolidação arquitetural, fundindo componentes de consulta e notificação dispersos nos respetivos domínios principais. Por exemplo, as lógicas de verificação de disponibilidade de bicicletas e docas foram unificadas no componente station_availability.
 
-   Resultado:
+   **Resultado:**
    Esta refatorização originou a matriz de Componentes Lógicos Finais, garantindo um equilíbrio ótimo entre a alta coesão funcional, a redução da complexidade estrutural e a viabilidade de implementação do sistema Lisboa Pedala.
