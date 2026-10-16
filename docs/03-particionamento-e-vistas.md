@@ -306,3 +306,14 @@ maintenance_orders/
     ├── MaintenanceRepository.java          # Comunica com a base de dados para gravar o registo de avarias
     └── schema.sql (1 tabela)               # Tabela que guarda os detalhes das ordens de manutenção, estado e histórico
 ```
+### Regras Allowed-to-Use
+
+Para garantir que o monólito modular mantém a coesão interna e um baixo acoplamento entre os diferentes domínios do sistema **Lisboa Pedala**, são aplicadas estritamente duas regras fundamentais de arquitetura:
+
+1. **Utilização exclusiva via API Pública (Fachada):** 
+   Um módulo só pode interagir com outro através da respetiva API pública (*Fachada*). Por exemplo, o módulo `dock_access` tem permissão para aceder ao método `updateAvailability()` exposto na API pública de `station_availability` para atualizar o estado das docas livres e ocupadas. No entanto, é estritamente proibido o acesso direto a componentes internos da camada de negócio, como o `AvailabilityService()`. 
+
+    ![Regras Allowed-to-Use entre Módulos](../figuras/regra1.jpg)
+
+2. **Isolamento Estrito de Dados:** 
+   Nenhum módulo tem acesso direto à base de dados ou aos repositórios de outro módulo. Cada subdomínio é dono exclusivo do seu esquema de dados (definido no seu próprio `schema.sql`), garantindo que toda a persistência é encapsulada e gerida internamente.
