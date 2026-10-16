@@ -1,0 +1,152 @@
+# 03 — Particionamento e Vistas Arquiteturais
+
+## 1. Introdução
+
+Este documento especifica a organização estrutural e as vistas arquiteturais do sistema **Lisboa Pedala**, tendo por base os componentes lógicos identificados em `02-componentes.md` e os requisitos do enunciado.
+
+O objetivo é definir a organização do código-fonte em tempo de desenvolvimento, explicitar as dependências permitidas entre módulos e descrever a colaboração entre componentes durante a execução dos principais casos de utilização. Pretende-se reduzir o acoplamento, aumentar a coesão e facilitar a evolução e a verificação da arquitetura.
+
+O documento apresenta as seguintes vistas:
+
+1. **Particionamento de topo e trade-offs:** comparação entre uma organização técnica por camadas e uma organização por domínio, justificando a opção selecionada.
+2. **Vista de módulos e regras `Allowed-to-Use`:** organização dos módulos de topo e definição das dependências permitidas e proibidas.
+3. **Vista de Componentes e Conectores (C&C)** 
+4. **Vista de Alocação:** distribuição dos componentes lógicos pelos elementos de execução previstos para o sistema.
+
+---
+
+## 2. Particionamento de Topo
+
+O particionamento de topo define a primeira divisão do código-fonte em módulos e influencia a forma como as alterações futuras são distribuídas pela implementação.
+
+Para o Lisboa Pedala, foram consideradas duas alternativas: o particionamento técnico, que organiza o código por camadas, e o particionamento por domínio, que organiza o código de acordo com as responsabilidades funcionais do sistema.
+
+### 2.1. Comparação de alternativas: técnico vs. domínio
+
+#### Alternativa A — Particionamento técnico (*Layered Architecture*)
+
+Nesta abordagem, o código é organizado de acordo com a sua função técnica, por exemplo, apresentação, lógica de negócio e persistência.
+
+```text
+lisboa_pedala/
+├── presentation/
+│   ├── dock_access/
+│   ├── trip_lifecycle/
+│   ├── tariff_billing/
+|   ├── station_availability/
+|   ├── telemetry_ingestion/
+│   ├── fleet_redistribution/ 
+│   ├── maintenance_orders/ 
+│   └── reporting_audit/
+├── business/
+│   ├── dock_access/
+│   ├── trip_lifecycle/
+│   ├── tariff_billing/
+|   ├── station_availability/
+|   ├── telemetry_ingestion/
+│   ├── fleet_redistribution/ 
+│   ├── maintenance_orders/ 
+│   └── reporting_audit/
+├── persistence/
+│   ├── dock_access/
+│   ├── trip_lifecycle/
+│   ├── tariff_billing/
+|   ├── station_availability/
+|   ├── telemetry_ingestion/
+│   ├── fleet_redistribution/ 
+│   ├── maintenance_orders/ 
+│   └── reporting_audit/
+│   
+└── database
+```
+
+**Vantagens:**
+
+- Torna explícita a separação entre responsabilidades técnicas.
+- Facilita a identificação de funcionalidades relacionadas com a interface, a lógica de negócio ou o acesso aos dados.
+- Pode simplificar alterações tecnológicas transversais, desde que as dependências entre camadas estejam bem definidas.
+
+**Desvantagens no Lisboa Pedala:**
+
+- **Dispersão funcional:** uma alteração ao processo de faturação ou às regras de devolução pode obrigar a modificar ficheiros em várias camadas.
+- **Menor localidade da mudança:** os elementos que implementam uma funcionalidade não ficam necessariamente próximos no código-fonte.
+- **Risco de *Architecture Sinkhole*:** algumas chamadas podem atravessar várias camadas sem acrescentar lógica relevante, funcionando apenas como encaminhamento entre componentes.
+
+Esta alternativa favorece a organização por responsabilidade técnica, mas pode tornar menos evidente a localização das regras de negócio. Para alem disto a divisão layered, convem ser evitada aquando o desenvolvimento de sistemas e aplicaçoes grandes, como é o caso da Lisboa Pedala. 
+
+#### Alternativa B — Particionamento por domínio (*Modular Monolith*)
+
+Nesta abordagem, o primeiro nível de organização corresponde às responsabilidades funcionais do sistema. Cada módulo reúne os elementos necessários para implementar a sua área do domínio, mantendo contratos explícitos para a comunicação com outros módulos.
+
+```text
+lisboa_pedala/
+├── dock_access/
+├── trip_lifecycle/
+├── tariff_billing/
+├── station_availability/
+├── sensor_ingestion/
+├── fleet_redistribution/
+├── maintenance_orders/
+└── reporting_audit/
+```
+
+**Vantagens no Lisboa Pedala:**
+
+- **Localidade da mudança:** alterações às regras de tarifação ficam concentradas em `tariff_billing`; alterações ao ciclo de vida das viagens ficam concentradas em `trip_lifecycle`.
+- **Coesão funcional:** cada módulo agrupa responsabilidades relacionadas com uma capacidade do sistema.
+- **Fronteiras explícitas:** as dependências entre módulos podem ser documentadas e verificadas automaticamente.
+- **Evolução controlada:** uma eventual necessidade de separar um módulo para outro processo ou serviço poderá ser avaliada posteriormente, caso existam razões concretas para isso.
+
+**Desvantagens:**
+
+- Alterações transversais, como a migração do mecanismo de persistência, podem afetar vários módulos.
+- Sem regras de dependência e encapsulamento, os módulos podem começar a aceder diretamente aos detalhes internos uns dos outros, degradando a modularidade.
+- A divisão por domínio exige cuidado na definição da propriedade dos dados e das interfaces entre módulos.
+-  Evitar quando existe um exigência elevada de escalabilidade, elasticidade, disponibilidade, tolerância a falhas ou desempenho
+
+
+### 2.2. Avaliação dos trade-offs e seleção
+
+No contexto deste trabalho optou-se pelo **particionamento por domínio, implementado como monólito modular**.
+
+A principal razão para a escolha do monólito modular prende-se com a natureza das alterações funcionais previstas para o Lisboa Pedala. A gestão de viagens, a tarifação, a disponibilidade das estações e a manutenção representam responsabilidades distintas que beneficiam de módulos com fronteiras bem definidas. Desta forma, uma alteração às regras de tarifação tende a ficar concentrada em ``tariff_billing``, enquanto, numa arquitetura organizada por camadas técnicas, os elementos dessa funcionalidade podem encontrar-se distribuídos por várias camadas, reduzindo a localidade da mudança.
+
+Esta vantagem implica, contudo, um maior cuidado na definição e aplicação das dependências entre módulos. Além disso, as alterações tecnológicas transversais, como a substituição da tecnologia de persistência, podem afetar vários módulos. Assim, o particionamento por domínio não é necessariamente a melhor opção para todos os tipos de alteração, devendo a escolha refletir as prioridades do sistema.
+
+A manutenção de uma única unidade de implantação é também compatível com a dimensão da equipa e com o orçamento disponível, permitindo evitar, nesta fase, a complexidade operacional associada a uma arquitetura distribuída. Em contrapartida, os módulos não podem ser implantados nem escalados de forma independente, o que limita a capacidade de responder isoladamente a aumentos de carga numa área específica do sistema.
+
+Embora os materiais fornecidos recomendem evitar o monólito modular quando existem exigências elevadas de elasticidade, esta característica deve ser ponderada à luz do contexto concreto do Lisboa Pedala. Ao contrário de plataformas como a Ticketmaster, que podem enfrentar picos muito elevados de procura durante a venda de bilhetes para eventos populares, o Lisboa Pedala tem uma dimensão operacional prevista de 1 500 bicicletas distribuídas por 180 estações. Mesmo considerando possíveis aumentos da procura durante eventos como os Santos Populares, não se considera, à partida, que estes picos justifiquem, por si só, a adoção de uma arquitetura distribuída. Esta avaliação constitui, no entanto, uma hipótese de projeto que deverá ser validada através de estimativas de carga e, posteriormente, de dados de utilização reais.
+
+Deste modo, embora a elasticidade continue a ser uma característica relevante, a escala prevista do sistema não constitui, nesta fase, um motivo suficiente para rejeitar o monólito modular. A decisão deverá ser reavaliada caso a utilização real revele picos de carga, requisitos de disponibilidade ou necessidades de escalabilidade que a arquitetura adotada não consiga satisfazer de forma adequada.
+
+Conclui-se, assim, que o monólito modular representa um compromisso adequado às necessidades atualmente conhecidas do Lisboa Pedala, privilegiando a coesão funcional e a localidade das alterações ao domínio, sem introduzir antecipadamente os custos operacionais de uma arquitetura distribuída. A concretização destas vantagens depende, contudo, da definição clara das fronteiras entre módulos, da aplicação de regras de encapsulamento e da utilização de testes arquiteturais que permitam detetar e prevenir a degradação da modularidade ao longo do desenvolvimento.
+
+### 2.3. Topologia dos módulos de domínio
+
+Com base nos componentes definidos em `02-componentes.md`, propõe-se a seguinte organização de topo:
+
+```text
+lisboa_pedala/
+├── dock_access/
+├── trip_lifecycle/
+├── tariff_billing/
+├── station_availability/
+├── sensor_ingestion/
+├── fleet_redistribution/
+├── maintenance_orders/
+└── reporting_audit/
+```
+
+As responsabilidades são as seguintes:
+
+| Módulo | Responsabilidade |
+|---|---|
+| `dock_access` | Validar pedidos de desbloqueio e devolução e comunicar com as docas físicas. Inclui o tratamento dos eventos recebidos após períodos de desconexão. |
+| `trip_lifecycle` | Gerir o início, a duração e o fecho das viagens, incluindo os dados necessários para consultar o histórico de viagens. |
+| `tariff_billing` | Calcular tarifas, processar pagamentos, aplicar regras tarifárias e gerir a emissão e comunicação de faturas. |
+| `station_availability` | Manter a representação atualizada da ocupação das estações e da disponibilidade de bicicletas e docas. |
+| `sensor_ingestion` | Receber e processar telemetria proveniente das bicicletas e dos dispositivos associados. |
+| `fleet_redistribution` | Calcular propostas de redistribuição de bicicletas e apoiar a consulta e execução das rotas das carrinhas. |
+| `maintenance_orders` | Criar, acompanhar e concluir ordens de manutenção, incluindo as originadas por reportes de avarias ou anomalias detetadas. |
+| `reporting_audit` | Agregar informação operacional para produzir relatórios e apoiar a auditoria. |
+
