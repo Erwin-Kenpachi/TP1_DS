@@ -72,7 +72,7 @@ lisboa_pedala/
 - **Menor localidade da mudança:** os elementos que implementam uma funcionalidade não ficam necessariamente próximos no código-fonte.
 - **Risco de *Architecture Sinkhole*:** algumas chamadas podem atravessar várias camadas sem acrescentar lógica relevante, funcionando apenas como encaminhamento entre componentes.
 
-Esta alternativa favorece a organização por responsabilidade técnica, mas pode tornar menos evidente a localização das regras de negócio. Para alem disto a divisão layered, convem ser evitada aquando o desenvolvimento de sistemas e aplicaçoes grandes, como é o caso da Lisboa Pedala. 
+Esta alternativa favorece a organização por responsabilidade técnica, mas pode tornar menos evidente a localização das regras de negócio. Para alem disto a divisão layered, convem ser evitada aquando o desenvolvimento de sistemas e aplicações grandes, como é o caso da Lisboa Pedala. 
 
 #### Alternativa B — Particionamento por domínio (*Modular Monolith*)
 
@@ -150,3 +150,64 @@ As responsabilidades são as seguintes:
 | `maintenance_orders` | Criar, acompanhar e concluir ordens de manutenção, incluindo as originadas por reportes de avarias ou anomalias detetadas. |
 | `reporting_audit` | Agregar informação operacional para produzir relatórios e apoiar a auditoria. |
 
+
+### 3.1. Regras de Dependência
+
+As dependências entre os módulos de domínio obedecem às seguintes regras restritivas (*Allowed-to-Use*):
+
+| Módulo Origem | Módulos Permitidos (*Allowed-to-Use*) | Módulos Proibidos |
+| :--- | :--- | :--- |
+| `dock_access` | `trip_lifecycle`, `station_availability` | `tariff_billing`, `sensor_ingestion` |
+| `trip_lifecycle` | `tariff_billing`, `station_availability` | `dock_access`, `sensor_ingestion` |
+| `tariff_billing` | *(Nenhum - módulo folha/orquestrado)* | Todos os outros |
+| `station_availability` | *(Nenhum)* | Todos os outros |
+| `sensor_ingestion` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
+| `fleet_redistribution` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
+| `maintenance_orders` | `station_availability` | Módulos de negócio crítico |
+| `reporting_audit` | Todos os módulos de leitura (em modo de agregação) | Modificação direta de estado |
+
+Estas regras serão transpostas para testes arquiteturais automáticos (*fitness functions* na pasta `tests/architecture/`) para impedir violações no código-fonte[cite: 7].
+
+
+
+
+```text
+dock_access/
+├── index.js · API pública
+│   ├── unlockDock
+│   ├── confirmDocking
+│   └── getDockStatus
+├── presentation/
+│   └── dockController
+├── business/
+│   ├── dockService
+│   ├── unlockingService
+│   ├── dockingService
+│   └── bufferService
+└── persistence/
+    ├── dockRepository
+
+station_availability/
+├── index · API pública                  # Fachada que expõe apenas os contratos permitidos para os outros módulos
+│   ├── getStationOccupancy                 # Devolve quantas docas livres e ocupadas existem
+│   └── updateAvailability                  # Atualiza o estado da estação quando uma doca muda de livre para ocupada (ou vice-versa)
+├── presentation/                           # Camada de Apresentação
+│   └── stationController               # Expõe os endpoints REST para o frontend consultar a ocupação do mapa em tempo real
+├── business/                               # Camada de Lógica de Negócio (Domínio)
+│   ├── availabilityService             # Calcula a ocupação atual: doca livre = sem bicicleta; doca ocupada = com bicicleta
+│   └── stationService                 # Gere os dados de localização e capacidade máxima das 180 estações
+└── persistence/                            # Camada de Persistência de Dados
+    ├── stationRepository              # Comunica com a base de dados para ler e atualizar o estado das estações
+    └── schema.sql (1 tabela)               # Tabela que guarda a identidade da estação, localização e contadores consolidados
+
+fleet_redistribution/
+├── index. · API pública                 
+│   └── getActiveRoutes                   # Mostra as rotas aos condutores
+├── presentation/                          
+│   └── routeReader                    # O endpoint HTTP que recebe o pedido do operador ou do sistema externo
+├── business/                              
+│   └── calculateRoutes                # Calcula melhores rotas com base nas docas livres
+└── persistence/                            
+    └── redistributionRepository
+
+```
