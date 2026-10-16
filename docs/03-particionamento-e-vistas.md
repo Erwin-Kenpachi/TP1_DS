@@ -151,7 +151,7 @@ As responsabilidades são as seguintes:
 | `reporting_audit` | Agregar informação operacional para produzir relatórios e apoiar a auditoria. |
 
 
-### 3.1. Regras de Dependência
+### 2.4. Regras de Dependência
 
 As dependências entre os módulos de domínio obedecem às seguintes regras restritivas (*Allowed-to-Use*):
 
@@ -169,8 +169,12 @@ As dependências entre os módulos de domínio obedecem às seguintes regras res
 Estas regras serão transpostas para testes arquiteturais automáticos (*fitness functions* na pasta `tests/architecture/`) para impedir violações no código-fonte[cite: 7].
 
 
+## 3. Vista de Módulos e Regras Allowed-to-Use
 
-## 2. Particionamento de Topo (refeito) 
+A vista de módulos descreve como o código é organizado e quais os módulos que podem utilizar os contratos de outros módulos.
+
+A estrutura proposta é:
+
 ```text
 dock_access/
 ├── DockAccessFacade.java · API pública     # Fachada que expõe apenas os contratos permitidos para os outros módulos
@@ -214,6 +218,70 @@ sensor_ingestion/
 └── persistence/                                  # Camada de Persistência de Dados
     └── TelemetryLogRepository.java               # Guarda histórico de telemetria e rastreio de percurso
 
+
+trip_lifecycle/
+├── index/ (ou TripLifecycleApi.java)      # Interface pública (Fachada do módulo)
+│   ├── startTrip()                      # Inicia uma nova viagem (chamado por dock_access)
+│   ├── completeTrip()                   # Encerra a viagem e calcula duração (chamado por dock_access)
+│   ├── getActiveTrip()                  # Consulta viagem em curso de um utilizador (para a app)
+│   ├── getTripHistory()                 # Histórico de viagens do utilizador (para a app)
+│   └── getTripsByPeriod()               # Consulta viagens num intervalo (para reporting_audit)
+├── presentation/
+│   └── TripController.java              # Endpoints REST (ex: GET /api/v1/trips/active, GET /api/v1/trips/history)
+├── business/
+│   ├── TripService.java                 # Coordena as regras: validações, cálculo de tempos, idempotência e aciona tariff_billing
+│   ├── Trip.java                        # Entidade de domínio: id, userId, bikeId, estações, timestamps, duração, status
+│   └── TripStatus.java                  # Enum com os estados: IN_PROGRESS, COMPLETED, CANCELLED
+└── persistence/
+    ├── TripRepository.java              # Queries SQL à tabela privada 'trips' (save, update, findById, findByUser)
+    └── schema.sql                       # DDL da tabela 'trips' (propriedade exclusiva deste módulo)
+
+tariff_billing/
+├── index/ (ou TariffBillingApi.java)      # Interface pública do módulo (único ponto de entrada para outros módulos)
+│   ├── processTripBilling()             # Calcula valor, cobra e gera fatura (chamado por trip_lifecycle)
+│   ├── getInvoiceByTripId()             # Consulta a fatura associada a uma viagem
+│   └── getUserInvoices()                # Lista todas as faturas de um determinado utilizador
+├── presentation/
+│   └── BillingController.java           # Endpoints REST (ex: GET /api/v1/invoices/{id}, GET /api/v1/invoices/download)
+├── business/
+│   ├── TariffCalculator.java            # Aplica regras de preço (45 min grátis passe anual, blocos 15 min, avulso ocasionais)
+│   ├── BillingService.java              # Orquestra cobrança, geração de fatura e comunicação com a AT
+│   ├── Invoice.java                     # Entidade de domínio: id, tripId, userId, amount, tax, issuedAt, status
+│   └── adapters/                        # Adaptadores para serviços externos
+│       ├── PaymentGatewayAdapter.java   # Comunicação simulada com MB WAY e Cartão
+│       └── TaxAuthorityAdapter.java     # Comunicação com o webservice da Autoridade Tributária (AT)
+└── persistence/
+    ├── InvoiceRepository.java           # Queries SQL para guardar e consultar faturas (retenção de 10 anos)
+    └── schema.sql                       # DDL da tabela privada 'invoices'
+
+
+reporting_audit/
+├── index/ (ou ReportingAuditApi.java)     # Interface pública
+│   ├── generateMonthlyReport()          # Gera e devolve o relatório mensal municipal consolidado
+│   └── getStationOpenData()             # Prepara métricas agregadas de estações para dados abertos
+├── presentation/
+│   └── ReportController.java            # Endpoints REST exclusivos para Gestores Municipais (ex: GET /api/v1/admin/reports/monthly)
+├── business/
+│   ├── ReportGeneratorService.java      # Coordena a agregação: pede viagens a trip_lifecycle e estações a station_availability
+│   ├── CarbonSavingsCalculator.java     # Aplica a fórmula do CO2 evitado face ao transporte motorizado
+│   ├── ParishUsageAggregator.java       # Agrupa viagens por freguesia (origem/destino em Lisboa)
+│   └── MunicipalReport.java             # Entidade/modelo do relatório mensal gerado
+└── persistence/
+    ├── ReportRepository.java            # Guarda o histórico dos relatórios mensais gerados para fins de auditoria
+    └── schema.sql                       # DDL da tabela privada 'monthly_reports'
+
+history_reader/
+├── index/ (ou HistoryReaderApi.java)      # Interface pública
+│   ├── getUserCompleteHistory()         # Devolve a lista unificada de viagens com as respetivas faturas
+│   └── getTripReceiptDetails()          # Devolve o detalhe de uma viagem específica com o recibo fiscal associado
+├── presentation/
+│   └── HistoryController.java           # Endpoints REST para a app móvel (ex: GET /api/v1/me/history, GET /api/v1/me/trips/{id}/receipt)
+├── business/
+│   ├── HistoryAggregationService.java   # Consulta trip_lifecycle e tariff_billing e faz o "merge" dos dados
+│   └── UserTripHistoryDTO.java          # Objeto de transferência: dados da viagem (hora, estações) + fatura (valor, estado, link AT)
+└── persistence/
+    └── (Sem persistência própria)       # Módulo puramente computacional/agregador (stateless). Não necessita de tabelas próprias.
+
 fleet_redistribution/
 ├── Fleet_redistribution.java (ou Pacote Fachada) · API pública
 │   └── getActiveRoutes()      
@@ -238,14 +306,3 @@ maintenance_orders/
     ├── MaintenanceRepository.java          # Comunica com a base de dados para gravar o registo de avarias
     └── schema.sql (1 tabela)               # Tabela que guarda os detalhes das ordens de manutenção, estado e histórico
 ```
-### Regras Allowed-to-Use
-
-Para garantir que o monólito modular mantém a coesão interna e um baixo acoplamento entre os diferentes domínios do sistema **Lisboa Pedala**, são aplicadas estritamente duas regras fundamentais de arquitetura:
-
-1. **Utilização exclusiva via API Pública (Fachada):** 
-   Um módulo só pode interagir com outro através da respetiva API pública (*Fachada*). Por exemplo, o módulo `dock_access` tem permissão para aceder ao método `updateAvailability()` exposto na API pública de `station_availability` para atualizar o estado das docas livres e ocupadas. No entanto, é estritamente proibido o acesso direto a componentes internos da camada de negócio, como o `AvailabilityService()`. 
-
-    ![Regras Allowed-to-Use entre Módulos](../figuras/regra1.jpg)
-    
-2. **Isolamento Estrito de Dados:** 
-   Nenhum módulo tem acesso direto à base de dados ou aos repositórios de outro módulo. Cada subdomínio é dono exclusivo do seu esquema de dados (definido no seu próprio `schema.sql`), garantindo que toda a persistência é encapsulada e gerida internamente.
