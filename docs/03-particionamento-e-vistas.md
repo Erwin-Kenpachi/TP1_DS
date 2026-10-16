@@ -173,41 +173,68 @@ Estas regras serão transpostas para testes arquiteturais automáticos (*fitness
 
 ```text
 dock_access/
-├── index.js · API pública
-│   ├── unlockDock
-│   ├── confirmDocking
-│   └── getDockStatus
-├── presentation/
-│   └── dockController
-├── business/
-│   ├── dockService
-│   ├── unlockingService
-│   ├── dockingService
-│   └── bufferService
-└── persistence/
-    ├── dockRepository
+├── DockAccessFacade.java · API pública     # Fachada que expõe apenas os contratos permitidos para os outros módulos
+│   ├── unlockDock()                        # Destranca uma doca específica para levantamento de bicicleta
+│   ├── confirmDocking()                    # Confirma o encaixe bem-sucedido de uma bicicleta numa doca
+│   └── getDockStatus()                     # Consulta o estado atual de uma doca (livre/ocupada/avariada)
+├── presentation/                           # Camada de Apresentação
+│   └── DockController.java                 # Controlador REST que recebe os pedidos da App móvel nas estações
+├── business/                               # Camada de Lógica de Negócio (Domínio)
+│   ├── DockService.java                    # Gere o estado geral e ciclo de vida das docas
+│   ├── UnlockingService.java               # Lógica específica de validação de tokens e destrancagem segura
+│   ├── DockingService.java                 # Lógica de confirmação de encaixe e leitura de sensores da doca
+│   └── BufferService.java                  # Gere o buffer temporário ou reentras de comunicação offline
+└── persistence/                            # Camada de Persistência de Dados
+    └── DockRepository.java                 # Comunica com a base de dados para atualizar o estado físico da doca
 
 station_availability/
-├── index · API pública                  # Fachada que expõe apenas os contratos permitidos para os outros módulos
-│   ├── getStationOccupancy                 # Devolve quantas docas livres e ocupadas existem
-│   └── updateAvailability                  # Atualiza o estado da estação quando uma doca muda de livre para ocupada (ou vice-versa)
+├── StationAvailabilityFacade.java · API pública # Fachada que expõe apenas os contratos permitidos para os outros módulos
+│   ├── getStationOccupancy()               # Devolve quantas docas livres (sem bicicleta) e ocupadas (com bicicleta) existem
+│   └── updateAvailability()                # Atualiza o estado da estação quando uma doca muda de livre para ocupada (ou vice-versa)
 ├── presentation/                           # Camada de Apresentação
-│   └── stationController               # Expõe os endpoints REST para o frontend consultar a ocupação do mapa em tempo real
+│   └── StationController.java              # Expõe os endpoints REST para o frontend consultar a ocupação do mapa em tempo real
 ├── business/                               # Camada de Lógica de Negócio (Domínio)
-│   ├── availabilityService             # Calcula a ocupação atual: doca livre = sem bicicleta; doca ocupada = com bicicleta
-│   └── stationService                 # Gere os dados de localização e capacidade máxima das 180 estações
+│   ├── AvailabilityService.java            # Calcula a ocupação atual: doca livre = sem bicicleta; doca ocupada = com bicicleta
+│   └── StationService.java                 # Gere os dados de localização e capacidade máxima das 180 estações
 └── persistence/                            # Camada de Persistência de Dados
-    ├── stationRepository              # Comunica com a base de dados para ler e atualizar o estado das estações
+    ├── StationRepository.java              # Comunica com a base de dados para ler e atualizar o estado das estações
     └── schema.sql (1 tabela)               # Tabela que guarda a identidade da estação, localização e contadores consolidados
 
-fleet_redistribution/
-├── index. · API pública                 
-│   └── getActiveRoutes                   # Mostra as rotas aos condutores
-├── presentation/                          
-│   └── routeReader                    # O endpoint HTTP que recebe o pedido do operador ou do sistema externo
-├── business/                              
-│   └── calculateRoutes                # Calcula melhores rotas com base nas docas livres
-└── persistence/                            
-    └── redistributionRepository
+sensor_ingestion/
+├── SensorIngestionFacade.java · API pública      # Ponto de entrada para outros módulos consultarem dados em tempo real
+│   └── getLatestTelemetry()
+├── presentation/                                 # Camada de Apresentação / Ingestão de Rede
+│   └── TelemetryController.java                  # Endpoint / Webhook para receber os pings das 1.050 bikes (~35 req/s)
+├── business/                                     # Camada de Lógica de Negócio (Processamento e IA/Regras)
+│   ├── TelemetryParserService.java               # Descodifica o pacote binário/JSON bruto (GPS, bateria, velocidade)
+│   ├── LostBikeDetectorService.java              # ⭐ Deteta falhas prolongadas de sinal (> 2h sem ping fora da doca)
+│   ├── MalfunctionService.java                   # ⭐ Avalia componentes e deteta avarias mecânicas/elétricas
+│   ├── MalfunctionEmitter.java                   # ⭐ Dispara o alerta para a fachada de manutenção de forma assíncrona
+│   └── SignalDispatcherService.java              # Encaminha os dados limpos para os módulos interessados
+└── persistence/                                  # Camada de Persistência de Dados
+    └── TelemetryLogRepository.java               # Guarda histórico de telemetria e rastreio de percurso
 
+fleet_redistribution/
+├── Fleet_redistribution.java (ou Pacote Fachada) · API pública
+│   └── getActiveRoutes()      
+├── presentation/
+│   └── RouteReader.java           # Controlador REST / Ponto de entrada
+├── business/
+│   ├── CalculateRoutes.java             # Lógica central do algoritmo de otimização de frota
+│   └── RoutingClientService.java       # Cena para comunicar com mapa ns se é preciso
+└── persistence/
+    └── RedistributionRepository.java # Acesso à base de dados
+
+maintenance_orders/
+├── MaintenanceFacade.java · API pública     # Fachada que expõe os contratos permitidos para os outros módulos
+│   ├── createMaintenanceOrder()            # Permite reportar uma avaria (numa doca ou bicicleta) e abrir ordem de reparação
+│   └── getPendingOrders()                  # Devolve a lista de manutenções pendentes para a equipa técnica
+├── presentation/                           # Camada de Apresentação
+│   └── MaintenanceController.java          # Controlador REST para a app/painel dos técnicos de manutenção em campo
+├── business/                               # Camada de Lógica de Negócio (Domínio)
+│   ├── TicketService.java                  # Gere o ciclo de vida da avaria (aberta, em progresso, resolvida)
+│   └── TechnicianAssignmentService.java    # Lógica de atribuição de ordens de serviço aos técnicos disponíveis
+└── persistence/                            # Camada de Persistência de Dados
+    ├── MaintenanceRepository.java          # Comunica com a base de dados para gravar o registo de avarias
+    └── schema.sql (1 tabela)               # Tabela que guarda os detalhes das ordens de manutenção, estado e histórico
 ```
