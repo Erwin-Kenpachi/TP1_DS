@@ -211,9 +211,9 @@ sensor_ingestion/
 │   └── TelemetryController.java                  # Endpoint / Webhook para receber os pings das 1.050 bikes (~35 req/s)
 ├── business/                                     # Camada de Lógica de Negócio (Processamento e IA/Regras)
 │   ├── TelemetryParserService.java               # Descodifica o pacote binário/JSON bruto (GPS, bateria, velocidade)
-│   ├── LostBikeDetectorService.java              # ⭐ Deteta falhas prolongadas de sinal (> 2h sem ping fora da doca)
-│   ├── MalfunctionService.java                   # ⭐ Avalia componentes e deteta avarias mecânicas/elétricas
-│   ├── MalfunctionEmitter.java                   # ⭐ Dispara o alerta para a fachada de manutenção de forma assíncrona
+│   ├── LostBikeDetectorService.java              # Deteta falhas prolongadas de sinal (> 2h sem ping fora da doca)
+│   ├── MalfunctionService.java                   # Avalia componentes e deteta avarias mecânicas/elétricas
+│   ├── MalfunctionEmitter.java                   # Dispara o alerta para a fachada de manutenção de forma assíncrona
 │   └── SignalDispatcherService.java              # Encaminha os dados limpos para os módulos interessados
 └── persistence/                                  # Camada de Persistência de Dados
     └── TelemetryLogRepository.java               # Guarda histórico de telemetria e rastreio de percurso
