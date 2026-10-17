@@ -315,5 +315,60 @@ Para garantir que o monólito modular mantém a coesão interna e um baixo acopl
 
     ![Regras Allowed-to-Use entre Módulos](../figuras/regra1.jpg)
 
-2. **Isolamento Estrito de Dados:** 
-   Nenhum módulo tem acesso direto à base de dados ou aos repositórios de outro módulo. Cada subdomínio é dono exclusivo do seu esquema de dados (definido no seu próprio `schema.sql`), garantindo que toda a persistência é encapsulada e gerida internamente.
+## 4. Vista de Componentes e Conectores (C&C) — Fluxo Desbloquear → Devolver → Cobrar
+
+A vista de Componentes e Conectores (C&C) descreve a arquitetura em tempo de execução (*runtime*), focando-se nas entidades computacionais ativas e nos mecanismos/canais de comunicação utilizados para concretizar o fluxo transacional central do sistema Lisboa Pedala (**US-1**: *como assinante, desbloqueio e devolvo uma bicicleta e a viagem fica registada e cobrada*).
+
+### 4.1. Componentes em Tempo de Execução (*Runtime Components*)
+
+| Componente | Tipo de Elemento | Responsabilidade no Fluxo |
+| :--- | :--- | :--- |
+| **`App Móvel / Totem`** | Cliente de Utilizador | Ponto de interação do ciclista (leitura do código QR na doca ou passagem do cartão Navegante). |
+| **`Doca Física (Dock Controller)`** | Dispositivo IoT Embarcado | Hardware na estação que comanda o trinco eletromecânico, deteta sensores de presença de bicicleta e possui buffer local de eventos (até 24h de eventos em modo *offline*). |
+| **`dock_access`** | Serviço Backend (Monólito) | Valida permissões de desbloqueio, envia comandos físicos à doca e recebe confirmações de trancamento/devolução. |
+| **`trip_lifecycle`** | Serviço Backend (Monólito) | Gere o ciclo de vida transacional da viagem (registo inicial, transição para `EM_CURSO`, encerramento, cálculo de duração e garantia de idempotência). |
+| **`station_availability`** | Serviço Backend (Monólito) | Atualiza em tempo real os contadores de docas livres e bicicletas disponíveis na estação. |
+| **`tariff_billing`** | Serviço Backend (Monólito) | Aplica as regras de tarifação (45 min grátis para assinantes, blocos de 15 min extra, tarifários avulsos para ocasionais) e coordena a cobrança e faturação. |
+| **`Base de Dados Relacional`** | Sistema de Persistência | Armazena o estado das viagens e faturas com garantias ACID e retenção histórica exigida por lei (10 anos para dados fiscais). |
+| **`Gateway de Pagamentos`** | Sistema Externo | Serviço externo de processamento financeiro (MB WAY ou Cartão de Crédito). |
+| **`Autoridade Tributária (AT)`** | Sistema Externo | Webservice da AT para validação e comunicação eletrónica de faturas. |
+
+### 4.2. Conectores e Protocolos de Comunicação (*Connectors*)
+
+Em conformidade com a notação C&C (Bass, Clements & Kazman), cada canal de comunicação entre componentes possui propriedades e garantias específicas:
+
+| Conector | Tipo de Conector | Protocolo / Mecanismo | Sincronismo | Garantias e Tratamento de Falhas |
+| :--- | :--- | :--- | :---: | :--- |
+| **C1: Cliente $\rightarrow$ `dock_access`** | Chamada Remota | HTTPS / REST (JSON) | Síncrono | Autenticação por token/QR code; timeout e resposta com confirmação imediata. |
+| **C2: Doca Física $\leftrightarrow$ `dock_access`** | Mensagens IoT / RPC | Rede Móvel (MQTT / TCP) | Assíncrono com tolerância a falhas | **Tolerância a desconexão:** se a rede falhar, a doca armazena o evento em memória local (até 24h). Na reconexão, o reenvio é processado com idempotência no backend. |
+| **C3: Inter-Módulos (`dock_access` $\rightarrow$ `trip_lifecycle` $\rightarrow$ `tariff_billing`)** | Chamada de Procedimento | *In-Process Method Call* (Java/Python) | Síncrono | Chamadas locais em memória via API pública (fachada), de alta velocidade e sem overhead de rede. |
+| **C4: Módulos $\rightarrow$ Base de Dados** | Acesso a Dados | Driver SQL / JDBC | Síncrono transacional | Transações atómicas para assegurar que viagens e faturas mantêm integridade referencial sem duplicações. |
+| **C5: `tariff_billing` $\rightarrow$ Gateways Externos** | Chamada Remota Web | HTTPS / REST | Síncrono com retries | Circuit breaker e timeouts dedicados; gravação do estado `PENDENTE` em caso de falha de comunicação externa. |
+
+### 4.3. Diagrama de Sequência C&C do Fluxo
+
+O diagrama seguinte ilustra as interações entre os componentes e os respetivos conectores ao longo das três fases do fluxo:
+
+
+
+### 4.4. Descrição Detalhada das Fases do Fluxo
+
+1. **Fase de Desbloqueio (`desbloquear`):**
+   * O fluxo tem início quando o assinante ou utilizador ocasional solicita o desbloqueio através da aplicação móvel (lendo o código QR da doca) ou encostando o cartão Navegante na interface física da doca (Requisito 1).
+   * O módulo `dock_access` verifica a aptidão do pedido e contacta a fachada do `trip_lifecycle`.
+   * Para garantir a integridade do sistema, a viagem é persistida na base de dados no estado `EM_CURSO` antes de o comando de abertura ser enviado à doca física. Só após a confirmação transacional é que o trinco elétrico é acionado.
+   * Por fim, o módulo `station_availability` é notificado para decrementar o número de bicicletas disponíveis e incrementar as docas livres na estação.
+
+2. **Fase de Devolução (`devolver`):**
+   * O utilizador posiciona e encaixa a bicicleta numa doca disponível. A confirmação mecânica do encaixe tranca imediatamente o fecho físico (Requisito 2).
+   * **Resiliência a falhas de rede (Requisito de Robustez):** Conforme estipulado no contexto do kata, há zonas de Lisboa com cobertura de rede móvel instável. Cada doca dispõe de capacidade de armazenamento local para reter até 24 horas de eventos de devolução. Quando a conectividade é restabelecida, os registos são transmitidos para o `dock_access`.
+   * O `trip_lifecycle` implementa **idempotência estrita**: se o mesmo evento de devolução for recebido em duplicado, o sistema reconhece a viagem já concluída e não altera o histórico nem gera novas cobranças. A duração final é calculada e a viagem passa ao estado `CONCLUIDA`.
+
+3. **Fase de Cobrança (`cobrar`):**
+   * A conclusão da viagem despoleta uma invocação síncrona para a API pública do `tariff_billing`.
+   * **Aplicação do Modelo Tarifário (Requisito 3):**
+     * **Assinantes (passe anual):** Têm 45 minutos gratuitos em cada viagem; caso a viagem exceda esse período, é cobrada uma taxa por cada bloco adicional de 15 minutos.
+     * **Utilizadores ocasionais:** É cobrado o valor avulso correspondente à viagem.
+   * Se houver saldo a liquidar, o conector externo com a entidade de pagamentos (MB WAY ou Cartão bancário) processa a transação financeira.
+   * **Conformidade Fiscal e Retenção (Contexto legal):** A fatura gerada é comunicada via webservice à Autoridade Tributária e fica arquivada na base de dados durante o prazo obrigatório de 10 anos. O utilizador pode consultar a qualquer momento a fatura e o histórico no seu perfil (Requisito 8).
+ 
