@@ -372,3 +372,54 @@ O diagrama seguinte ilustra as interações entre os componentes e os respetivos
    * Se houver saldo a liquidar, o conector externo com a entidade de pagamentos (MB WAY ou Cartão bancário) processa a transação financeira.
    * **Conformidade Fiscal e Retenção (Contexto legal):** A fatura gerada é comunicada via webservice à Autoridade Tributária e fica arquivada na base de dados durante o prazo obrigatório de 10 anos. O utilizador pode consultar a qualquer momento a fatura e o histórico no seu perfil (Requisito 8).
  
+## 5. Vista de alocação
+
+A vista de alocação descreve a correspondência entre os componentes lógicos do sistema Lisboa Pedala, os ambientes onde são executados e os elementos da equipa responsáveis pela sua implementação e manutenção. Esta vista permite identificar onde corre cada parte do sistema e clarificar a responsabilidade sobre o código-fonte através do ficheiro `CODEOWNERS`.
+
+### 5.1. Alocação dos componentes aos ambientes de execução
+
+
+### 5.2. Responsabilidade da equipa
+
+Para facilitar a manutenção do sistema, cada módulo deve ter um responsável principal, encarregado de acompanhar a sua implementação, rever alterações e assegurar o cumprimento das regras arquiteturais. Esta responsabilidade não impede a colaboração de outros elementos do grupo.
+
+| Módulo ou componente | Responsável principal | Responsabilidades |
+|---|---|---|
+| `dock_access` | A definir | Desbloqueio e devolução de bicicletas e comunicação com as docas |
+| `trip_lifecycle` | A definir | Registo, acompanhamento e conclusão das viagens |
+| `tariff_billing` | A definir | Cálculo de tarifas, pagamentos e faturação |
+| `station_availability` | A definir | Disponibilidade de bicicletas e docas nas estações |
+| `sensor_ingestion` | A definir | Receção e processamento da telemetria |
+| `fleet_redistribution` | A definir | Propostas de redistribuição da frota e gestão de rotas |
+| `maintenance_orders` | A definir | Registo e acompanhamento das ordens de manutenção |
+| `reporting_audit` | A definir | Relatórios operacionais, agregação de dados e auditoria |
+| Infraestrutura e integração | A definir | Configuração do ambiente de execução, integração e persistência |
+
+
+### 5.3. Gestão da responsabilidade pelo código com `CODEOWNERS`
+
+A responsabilidade sobre o código-fonte pode ser registada num ficheiro `CODEOWNERS`, colocado, por exemplo, em `.github/CODEOWNERS`. Este ficheiro associa os caminhos do repositório aos respetivos responsáveis e pode ser utilizado para encaminhar pedidos de revisão de código.
+
+Exemplo de estrutura, a adaptar aos nomes de utilizador reais do repositório:
+
+```text
+# Módulos de domínio
+/dock_access/             @utilizador_a
+/trip_lifecycle/          @utilizador_b
+/tariff_billing/          @utilizador_c
+/station_availability/    @utilizador_d
+/sensor_ingestion/        @utilizador_e
+/fleet_redistribution/    @utilizador_f
+/maintenance_orders/      @utilizador_g
+/reporting_audit/         @utilizador_h
+
+# Testes e regras arquiteturais
+/tests/architecture/      @responsavel_arquitetura
+```
+
+Os identificadores acima são apenas ilustrativos e devem ser substituídos pelos utilizadores ou equipas existentes no repositório. Se um elemento for responsável por vários módulos, o mesmo identificador poderá aparecer em várias regras.
+
+A existência do ficheiro `CODEOWNERS` não garante, por si só, que todas as alterações sejam aprovadas pelo responsável. A exigência de revisão pelos *code owners* depende também das regras de proteção de branches e das configurações do repositório.
+
+
+
