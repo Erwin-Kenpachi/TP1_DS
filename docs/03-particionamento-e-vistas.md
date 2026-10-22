@@ -87,6 +87,7 @@ lisboa_pedala/
 ├── sensor_ingestion/
 ├── fleet_redistribution/
 ├── maintenance_orders/
+├── history_reader/
 └── reporting_audit/
 ```
 
@@ -134,6 +135,7 @@ lisboa_pedala/
 ├── sensor_ingestion/
 ├── fleet_redistribution/
 ├── maintenance_orders/
+├── history_reader/
 └── reporting_audit/
 ```
 
@@ -149,6 +151,7 @@ As responsabilidades são as seguintes:
 | `fleet_redistribution` | Calcular propostas de redistribuição de bicicletas e apoiar a consulta e execução das rotas das carrinhas. |
 | `maintenance_orders` | Criar, acompanhar e concluir ordens de manutenção, incluindo as originadas por reportes de avarias ou anomalias detetadas. |
 | `reporting_audit` | Agregar informação operacional para produzir relatórios e apoiar a auditoria. |
+| `history_reader` | Agregar as informações de pagamentos e viagens do utilizador. |
 
 
 ### 2.4. Regras de Dependência
@@ -164,6 +167,7 @@ As dependências entre os módulos de domínio obedecem às seguintes regras res
 | `sensor_ingestion` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
 | `fleet_redistribution` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
 | `maintenance_orders` | `station_availability` | Módulos de negócio crítico |
+| `history_reader` |  `tariff_billing`,`trip_lifecycle`| Todos os outros
 | `reporting_audit` | Todos os módulos de leitura (em modo de agregação) | Modificação direta de estado |
 
 Estas regras serão transpostas para testes arquiteturais automáticos (*fitness functions* na pasta `tests/architecture/`) para impedir violações no código-fonte[cite: 7].
@@ -280,7 +284,7 @@ history_reader/
 │   ├── HistoryAggregationService.java   # Consulta trip_lifecycle e tariff_billing e faz o "merge" dos dados
 │   └── UserTripHistoryDTO.java          # Objeto de transferência: dados da viagem (hora, estações) + fatura (valor, estado, link AT)
 └── persistence/
-    └── (Sem persistência própria)       # Módulo puramente computacional/agregador (stateless). Não necessita de tabelas próprias.
+    └──schema.sql   
 
 fleet_redistribution/
 ├── Fleet_redistribution.java (ou Pacote Fachada) · API pública
@@ -314,6 +318,10 @@ Para garantir que o monólito modular mantém a coesão interna e um baixo acopl
    Um módulo só pode interagir com outro através da respetiva API pública (*Fachada*). Por exemplo, o módulo `dock_access` tem permissão para aceder ao método `updateAvailability()` exposto na API pública de `station_availability` para atualizar o estado das docas livres e ocupadas. No entanto, é estritamente proibido o acesso direto a componentes internos da camada de negócio, como o `AvailabilityService()`. 
 
     ![Regras Allowed-to-Use entre Módulos](../figuras/regra1.jpg)
+
+2. **Isolamento Estrito de Dados:** 
+   Nenhum módulo tem acesso direto à base de dados ou aos repositórios de outro módulo. Cada subdomínio é dono exclusivo do seu esquema de dados (definido no seu próprio `schema.sql`), garantindo que toda a persistência é encapsulada e gerida internamente.
+
 
 ## 4. Vista de Componentes e Conectores (C&C) — Fluxo Desbloquear → Devolver → Cobrar
 
@@ -393,6 +401,8 @@ Para facilitar a manutenção do sistema, cada módulo deve ter um responsável 
 | `fleet_redistribution` | A definir | Propostas de redistribuição da frota e gestão de rotas |
 | `maintenance_orders` | A definir | Registo e acompanhamento das ordens de manutenção |
 | `reporting_audit` | A definir | Relatórios operacionais, agregação de dados e auditoria |
+| `history_reader` | A definir | Relatórios do user |
+
 | Infraestrutura e integração | A definir | Configuração do ambiente de execução, integração e persistência |
 
 
