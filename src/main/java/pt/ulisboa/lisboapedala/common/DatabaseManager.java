@@ -16,6 +16,13 @@ import java.util.stream.Collectors;
  */
 public class DatabaseManager {
 
+    static {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException ignored) {
+        }
+    }
+
     private final String jdbcUrl;
     private Connection sharedConnection; // Usado para manter a base de dados SQLite in-memory ativa
 

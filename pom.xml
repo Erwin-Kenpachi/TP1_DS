@@ -39,7 +39,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>${slf4j.version}</version>
-            <scope>test</scope>
         </dependency>
 
         <!-- JUnit 5 -->
@@ -110,6 +109,16 @@
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
                     </includes>
+                </configuration>
+            </plugin>
+
+            <!-- Exec plugin to run the visual CLI application -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.2.0</version>
+                <configuration>
+                    <mainClass>pt.ulisboa.lisboapedala.LisboaPedalaApp</mainClass>
                 </configuration>
             </plugin>
         </plugins>
