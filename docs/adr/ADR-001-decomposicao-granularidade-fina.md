@@ -25,6 +25,8 @@ Na fase inicial, optou-se por criar componentes lógicos de granularidade fina, 
 - `route_reader`: consultar rotas das carrinhas de redistribuição;
 - `tariff_schedule`: gerir a aplicação de tarifas e respetivos horários;
 - `report_notification`: enviar notificações relacionadas com relatórios.
+- `history_reader`: apresentar informações ao utilizador.
+
 
 Esta decomposição permitiu identificar responsabilidades de forma explícita, mas a sua granularidade revelou-se excessiva para a dimensão e os objetivos do projeto. Na tentativa de consolidar os componentes, considerou-se também uma organização centrada em entidades, que poderia originar componentes como `BikeManager`. Esta solução foi rejeitada por não representar adequadamente as responsabilidades funcionais do sistema.
 
