@@ -24,66 +24,6 @@ Cria um plano de criação por 3 fases:
 Primeiro mostra me o plano de cada fase e só depois de eu aprovar implementas um de cada de vez
 
 
-## Prompt 3
-[Contexto fornecido: ARCHITECTURE.md, adr/ADR-002.md, adr/ADR-004.md, adr/ADR-005.md, docs/03-particionamento-e-vistas.md]
-
-Por favor, implementa exclusivamente o módulo de domínio `trip_lifecycle` em Java 21 para o sistema Lisboa Pedala, gerindo o ciclo de vida integral das viagens (início, duração, fecho e idempotência) para a US-1.
-
-Deves respeitar rigorosamente as diretrizes arquiteturais definidas em ARCHITECTURE.md e nos ADRs referidos, bem como a seguinte estrutura:
-
-1. Estrutura de Pacotes e Componentes Internos (em pt.ulisboa.lisboapedala.trip_lifecycle):
-   - Fachada Pública (TripLifecycleFacade.java): Métodos como startTrip(), completeTrip(), getActiveTrip(), getTripHistory(), getTripsByPeriod().
-   - Camada de Apresentação (presentation/TripController.java): Endpoints REST para consultas da app.
-   - Camada de Lógica de Negócio (business/): TripService.java, entidade Trip.java (com estados IN_PROGRESS, COMPLETED, CANCELLED) e garantia de idempotência para o reenvio de eventos offline (ADR-004).
-   - Camada de Persistência (persistence/TripRepository.java): Tabela privada num schema.sql exclusivo do módulo.
-
-2. Regras Estritas de Dependência e Allowed-to-Use (ADR-005):
-   - Permitido: trip_lifecycle apenas pode depender de tariff_billing e station_availability.
-   - Proibido: dependências de dock_access, sensor_ingestion ou outros módulos.
-   - Isolamento: Proibido aceder a pacotes internos de outros módulos ou realizar queries SQL cruzadas.
-
-Valida a implementação garantindo que o código passa sem erros no teste arquitetural ArchUnit (ModularMonolithArchitectureTest).
-
-## Prompt 4
-[Contexto fornecido: ARCHITECTURE.md, adr/ADR-005.md, adr/ADR-006.md, docs/03-particionamento-e-vistas.md]
-
-Por favor, implementa exclusivamente o módulo de domínio `tariff_billing` em Java 21 para o sistema Lisboa Pedala, atuando como módulo folha para cálculo de tarifas (45 min grátis para passes anuais e blocos de 15 min), pagamentos e faturação eletrônica com comunicação à AT para a US-1.
-
-Deves respeitar rigorosamente as diretrizes arquiteturais definidas em ARCHITECTURE.md e nos ADRs referidos, bem como a seguinte estrutura:
-
-1. Estrutura de Pacotes e Componentes Internos (em pt.ulisboa.lisboapedala.tariff_billing):
-   - Fachada Pública (TariffBillingFacade.java): Métodos como processTripBilling(), getInvoiceByTripId(), getUserInvoices().
-   - Camada de Apresentação (presentation/BillingController.java): Endpoints REST para faturas.
-   - Camada de Lógica de Negócio (business/): TariffCalculator.java, BillingService.java, Invoice.java e adaptadores simulados (PaymentGatewayAdapter.java, TaxAuthorityAdapter.java).
-   - Camada de Persistência (persistence/InvoiceRepository.java): Tabela privada com retenção fiscal de 10 anos num schema.sql exclusivo do módulo (ADR-006).
-
-2. Regras Estritas de Dependência e Allowed-to-Use (ADR-005):
-   - Permitido: Nenhum outro módulo de domínio (módulo folha).
-   - Proibido: Depender de qualquer outro módulo de domínio.
-   - Isolamento: Proibido aceder a pacotes internos de outros módulos ou partilhar tabelas de base de dados.
-
-Valida a implementação garantindo que o código passa sem erros no teste arquitetural ArchUnit (ModularMonolithArchitectureTest).
-
-
-### Prompt 6
-[Contexto fornecido: ARCHITECTURE.md, adr/ADR-002.md, adr/ADR-005.md, adr/ADR-006.md, docs/03-particionamento-e-vistas.md]
-
-Por favor, implementa exclusivamente o módulo de domínio `history_reader` em Java 21 para o sistema Lisboa Pedala, atuando como componente de consulta para o cliente aceder ao seu histórico unificado de viagens e respetivas faturas, enquadrado no suporte à US-1 e US-8.
-
-Deves respeitar rigorosamente as diretrizes arquiteturais definidas em ARCHITECTURE.md e nos ADRs referidos (em especial o papel exclusivo de leitura sem propriedade de escrita sobre viagens ou faturas), bem como a seguinte estrutura:
-
-1. Estrutura de Pacotes e Componentes Internos (em pt.ulisboa.lisboapedala.history_reader):
-   - Fachada Pública (HistoryReaderFacade.java): Métodos como getUserCompleteHistory() e getTripReceiptDetails().
-   - Camada de Apresentação (presentation/HistoryController.java): Endpoints REST para a app móvel consultar o histórico do utilizador.
-   - Camada de Lógica de Negócio (business/): HistoryAggregationService.java (consulta as fachadas de trip_lifecycle e tariff_billing e faz o "merge" dos dados sem possuir persistência própria de domínio, conforme ADR-002) e UserTripHistoryDTO.java.
-   - Camada de Persistência / Consulta: Acesso exclusivamente via leitura através das APIs públicas dos respetivos módulos de domínio, sem assumir a propriedade ou alteração de dados de viagens/faturas.
-
-2. Regras Estritas de Dependência e Allowed-to-Use (ADR-005 e ARCHITECTURE.md):
-   - Permitido: `history_reader` apenas pode utilizar os módulos `trip_lifecycle` e `tariff_billing` em modo de consulta de leitura.
-   - Proibido: Efetuar alterações de estado, comandos de escrita ou queries SQL diretas a tabelas de outros módulos.
-   - Isolamento: Proibido aceder a pacotes internos (.business/.persistence) de outros módulos.
-
-Valida a implementação garantindo que o código passa sem erros no teste arquitetural ArchUnit (ModularMonolithArchitectureTest).
 
 ## Prompt 7
 
