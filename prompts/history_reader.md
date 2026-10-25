@@ -19,3 +19,9 @@ Deves respeitar rigorosamente as diretrizes arquiteturais definidas em ARCHITECT
    - Isolamento: Proibido aceder a pacotes internos (.business/.persistence) de outros módulos.
 
 Valida a implementação garantindo que o código passa sem erros no teste arquitetural ArchUnit (ModularMonolithArchitectureTest).
+
+## 2. Resultado da Geração
+- **Decisão:** 
+- **Justificação:** 
+
+## 3. Deteção de Violações Arquiteturais
