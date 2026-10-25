@@ -35,10 +35,47 @@ Cria na interface uma maneira de me autenticar na app como utilizador basta uma 
 O técnico pode ver as ordens de manutenção que tem e atualizar o estado de uma bike.
 
 ## 2. Resultado da Geração
-- **Decisão:** Positivo, gerado com sucesso.
-- **Justificação:** A ferramenta implementou o módulo `maintenance_orders` respeitando a separação por camadas, a tabela SQLite dedicada no `schema.sql` e a integração síncrona de consulta ativa (*Pull*) à `SensorIngestionFacade`. A identificação de papéis de utilizador e técnico na app foi integrada de forma limpa nos fluxos de apresentação.
+- **Decisão:**
+- **Justificação:**
+## 3. Deteção de Violações Arquiteturais
+
+
+### Main
+### Prompt 7
+[Contexto fornecido: ARCHITECTURE.md, adr/ADR-002.md, adr/ADR-003.md, adr/ADR-005.md, adr/ADR-006.md, docs/03-particionamento-e-vistas.md]
+
+Por favor, implementa exclusivamente o módulo de domínio `maintenance_orders` em Java 21 para o sistema Lisboa Pedala, suportando a US-2: **Como técnico, recebo uma ordem de manutenção quando uma bicicleta reporta avaria**.
+
+Deves respeitar rigorosamente as diretrizes arquiteturais definidas em ARCHITECTURE.md e nos ADRs referidos, bem como a seguinte estrutura essencial:
+
+1. Estrutura de Pacotes e Componentes Internos (em `pt.ulisboa.lisboapedala.maintenance_orders`):
+   - **Fachada Pública (`MaintenanceOrdersFacade.java`)**: Ponto de entrada com os métodos essenciais:
+     * `void registerOrder(String bikeId, String issueDescription)`: Regista/cria uma nova ordem de reparação a partir da anomalia detetada.
+     * `List<MaintenanceOrderDTO> getPendingOrders()`: Devolve as ordens de manutenção pendentes para os técnicos.
+     * `void updateBikeStatus(String bikeId, String status)`: Permite ao técnico atualizar o estado de uma bicicleta avariada.
+   - **Camada de Apresentação (`presentation/MaintenanceController.java`)**: 
+     * Endpoints REST para o painel de campo dos técnicos de manutenção e inclusão de uma forma simples de autenticação/registo por papel (perfil de utilizador vs. técnico).
+   - **Camada de Lógica de Negócio (`business/`)**:
+     * `TicketService.java`: Consulta de forma síncrona a `SensorIngestionFacade.getUnresolvedAnomalies()` do módulo `sensor_ingestion` para recolher anomalias técnicas pendentes e convertê-las em ordens de manutenção locais através de `registerOrder`.
+     * `TechnicianAssignmentService.java`: Gestão básica de atribuição/visualização de ordens para os técnicos.
+   - **Camada de Persistência (`persistence/`)**:
+     * `MaintenanceOrderRepository.java`: Repositório para gravação dos tickets de manutenção.
+     * `schema.sql`: Definição da tabela privada `maintenance_orders_tickets` em SQLite exclusivo do módulo.
+
+2. Regras Estritas de Dependência e Allowed-to-Use (ADR-005):
+   - **Direção do Acoplamento:** O módulo `maintenance_orders` tem permissão para depender de `sensor_ingestion` (invocando exclusivamente a `SensorIngestionFacade`) e de `station_availability`.
+   - **Isolamento de Fachadas:** É estritamente proibido aceder a pacotes internos (`.business` ou `.persistence`) de outros módulos. Toda a interação com sensores é feita estritamente através do contrato público da fachada.
+   - **Independência Inversa:** O módulo `sensor_ingestion` não pode conhecer nem depender de `maintenance_orders` (estabilidade máxima $I = 0.0$).
+
+3. Verificação Arquitetural Automática:
+   - A implementação tem de passar integralmente nas *fitness functions* com ArchUnit (`ModularMonolithArchitectureTest`), validando a ausência de ciclos e o cumprimento estrito das regras *Allowed-to-Use*.
+
+---
+
+## 2. Resultado da Geração
+- **Decisão:** 
+- **Justificação:** 
 
 ## 3. Deteção de Violações Arquiteturais
-- **Houve violação da arquitetura?:** Não.
-- **Quem a detetou?:** Nenhuma violação registada.
-- **Descrição da ocorrência:** Os testes automáticos do ArchUnit (`ModularMonolithArchitectureTest`) correram com sucesso e validaram que o módulo `maintenance_orders` cumpre estritamente os limites do ADR-005, mantendo as dependências direcionadas unicamente para o `sensor_ingestion` e `station_availability` sem introduzir ciclos.
+- **Houve violação da arquitetura?:** 
+- **Descrição da ocorrência:**

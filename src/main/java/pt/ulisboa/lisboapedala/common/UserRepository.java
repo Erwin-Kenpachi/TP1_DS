@@ -29,38 +29,53 @@ public class UserRepository {
                     password  TEXT NOT NULL,
                     is_subscriber INTEGER NOT NULL DEFAULT 0,
                     payment_method TEXT NOT NULL DEFAULT 'MBWAY',
+                    user_type TEXT NOT NULL DEFAULT 'CYCLIST',
                     created_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
                 """;
         try (Connection conn = databaseManager.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute(sql.trim());
+            // Garante coluna em bases de dados já existentes
+            try {
+                stmt.execute("ALTER TABLE app_users ADD COLUMN user_type TEXT NOT NULL DEFAULT 'CYCLIST'");
+            } catch (SQLException ignored) {
+                // Coluna já existe
+            }
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao criar tabela app_users", e);
         }
     }
 
     /**
-     * Regista um novo utilizador. Devolve false se o username já existir.
+     * Regista um novo utilizador com tipo específico (ex: "CYCLIST" ou "TECHNICIAN").
      */
-    public boolean register(String userId, String username, String password, boolean isSubscriber, String paymentMethod) {
-        String sql = "INSERT INTO app_users (user_id, username, password, is_subscriber, payment_method) VALUES (?, ?, ?, ?, ?)";
+    public boolean register(String userId, String username, String password, boolean isSubscriber, String paymentMethod, String userType) {
+        String type = (userType != null && !userType.isBlank()) ? userType.toUpperCase() : "CYCLIST";
+        String sql = "INSERT INTO app_users (user_id, username, password, is_subscriber, payment_method, user_type) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, userId);
             stmt.setString(2, username.toLowerCase());
-            stmt.setString(3, password); // Em produção usaria hash; aqui é simulação
+            stmt.setString(3, password);
             stmt.setInt(4, isSubscriber ? 1 : 0);
             stmt.setString(5, paymentMethod);
+            stmt.setString(6, type);
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
-            // UNIQUE constraint violation → username já existe
             if (e.getMessage() != null && e.getMessage().contains("UNIQUE")) {
                 return false;
             }
             throw new RuntimeException("Erro ao registar utilizador", e);
         }
+    }
+
+    /**
+     * Regista um novo utilizador ciclista (compatibilidade).
+     */
+    public boolean register(String userId, String username, String password, boolean isSubscriber, String paymentMethod) {
+        return register(userId, username, password, isSubscriber, paymentMethod, "CYCLIST");
     }
 
     /**
@@ -75,11 +90,20 @@ public class UserRepository {
             stmt.setString(2, password);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
+                    String userType = "CYCLIST";
+                    try {
+                        String col = rs.getString("user_type");
+                        if (col != null && !col.isBlank()) {
+                            userType = col;
+                        }
+                    } catch (SQLException ignored) {
+                    }
                     return Optional.of(new UserProfile(
                             rs.getString("user_id"),
                             rs.getString("username"),
                             rs.getInt("is_subscriber") == 1,
-                            rs.getString("payment_method")
+                            rs.getString("payment_method"),
+                            userType
                     ));
                 }
             }
@@ -105,5 +129,19 @@ public class UserRepository {
     /**
      * Perfil imutável de um utilizador autenticado.
      */
-    public record UserProfile(String userId, String username, boolean isSubscriber, String paymentMethod) {}
+    public record UserProfile(
+            String userId,
+            String username,
+            boolean isSubscriber,
+            String paymentMethod,
+            String userType
+    ) {
+        public UserProfile(String userId, String username, boolean isSubscriber, String paymentMethod) {
+            this(userId, username, isSubscriber, paymentMethod, "CYCLIST");
+        }
+
+        public boolean isTechnician() {
+            return "TECHNICIAN".equalsIgnoreCase(userType) || "TECNICO".equalsIgnoreCase(userType);
+        }
+    }
 }
