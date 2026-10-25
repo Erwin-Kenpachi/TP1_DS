@@ -82,4 +82,27 @@ public class StationRepository {
             throw new RuntimeException("Erro ao atualizar contadores da estação " + stationId, e);
         }
     }
+
+    public java.util.List<StationOccupancyDTO> findAll() {
+        String sql = "SELECT * FROM station_availability_stations";
+        java.util.List<StationOccupancyDTO> stations = new java.util.ArrayList<>();
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                stations.add(new StationOccupancyDTO(
+                        rs.getString("station_id"),
+                        rs.getString("name"),
+                        rs.getString("parish"),
+                        rs.getInt("total_docks"),
+                        rs.getInt("available_bikes"),
+                        rs.getInt("free_docks")
+                ));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao listar todas as estações", e);
+        }
+        return stations;
+    }
 }
+

@@ -32,4 +32,9 @@ public class StationAvailabilityFacade {
     public void updateAvailability(String stationId, int bikeDelta, int dockDelta) {
         service.updateAvailability(stationId, bikeDelta, dockDelta);
     }
+
+    public java.util.List<StationOccupancyDTO> getAllStations() {
+        return service.getAllStations();
+    }
 }
+

@@ -24,4 +24,9 @@ public class StationAvailabilityService {
     public void updateAvailability(String stationId, int bikeDelta, int dockDelta) {
         repository.updateCounters(stationId, bikeDelta, dockDelta);
     }
+
+    public java.util.List<StationOccupancyDTO> getAllStations() {
+        return repository.findAll();
+    }
 }
+

@@ -39,10 +39,16 @@ Deves respeitar rigorosamente as diretrizes arquiteturais definidas em ARCHITECT
 ---
 
 ## 2. Resultado da Geração
-- **Decisão:** [Aceite / Rejeitado / Aceite com Correções]
-- **Justificação:** [Exemplo: A ferramenta gerou o módulo reporting_audit suportando a geração de relatórios de utilização por freguesia (US-4) e métricas de CO₂ evitado, respeitando a integração exclusiva por leitura via TripLifecycleFacade e StationAvailabilityFacade, com persistência isolada no schema.sql.]
+- **Decisão:** Aceite integralmente.
+- **Justificação:** A implementação gerada foi validada com sucesso através da suite de testes automatizados em [`ReportingAuditTest.java`](file:///c:/Users/Diogo%20Correia/Documents/FCUL_Mestrado/DesignSoftware/Trabalho1/TP1_DS/src/test/java/pt/ulisboa/lisboapedala/reporting_audit/ReportingAuditTest.java) (4 testes com 100% de sucesso) e pelos testes arquiteturais de ArchUnit:
+  1. **Relatório de Utilização por Freguesia (US-4) (`shouldGenerateParishUsageReportSuccessfully`):** Validação da agregação correta de viagens concluídas por freguesias de origem e destino (Avenidas Novas, Alvalade, Belém), contabilizando durações e poupança de CO₂ de forma anónima e sem dados pessoais (ADR-006 / RGPD).
+  2. **Relatório Mensal Consolidado da Câmara (Requisito 7) (`shouldGenerateAndPersistMonthlyMunicipalReport`):** Confirmação da geração de relatórios com totais de viagens, distâncias estimadas e CO₂ evitado, persistindo duradouramente na tabela `reporting_audit_monthly_reports` para auditoria.
+  3. **Portal de Dados Abertos (`shouldGenerateStationOpenData`):** Publicação de métricas de ocupação em percentagem por estação para o concelho de Lisboa.
+  4. **Camada de Apresentação (`controllerShouldExposeFacadeCorrectly`):** Integração do `ReportController` comunicando estritamente através da `ReportingAuditFacade`.
+  5. **Conformidade Global de Arquitetura:** Execução de `mvn test` totalizando **32 testes com 0 falhas**, confirmando o cumprimento da regra de *Allowed-to-Use* 8 do ArchUnit (`reporting_audit` apenas consome `trip_lifecycle` e `station_availability` em modo leitura).
 
 ## 3. Deteção de Violações Arquiteturais
-- **Houve violação da arquitetura?:** [Sim / Não]
-- **Quem a detetou?:** [Fitness Function (ArchUnit) / Revisão Humana / Ninguém até mais tarde]
-- **Descrição da ocorrência:** [Exemplo: Se a IA tentou fazer uma query direta SQL SELECT * FROM trips em vez de chamar TripLifecycleFacade.getTripsByPeriod(), a violação foi barrada pela revisão humana ou pelas regras de isolamento de persistência do monólito modular.]
+- **Houve violação da arquitetura?:** Não.
+- **Quem a detetou?:** Não aplicável.
+- **Descrição da ocorrência:** O código gerado respeitou rigorosamente os limites arquiteturais do Monólito Modular: não acedeu a pacotes internos (`.business` ou `.persistence`) de outros módulos nem realizou queries SQL diretas a tabelas alheias. Toda a informação foi obtida através dos métodos públicos `TripLifecycleFacade.getCompletedTripsBetween()` e `StationAvailabilityFacade.getAllStations()`, mantendo o ArchUnit 100% verde.
+
