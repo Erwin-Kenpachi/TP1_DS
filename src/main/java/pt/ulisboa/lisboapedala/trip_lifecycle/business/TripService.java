@@ -124,4 +124,8 @@ public class TripService {
     public List<TripDTO> getCompletedTripsBetween(LocalDateTime start, LocalDateTime end) {
         return tripRepository.findCompletedTripsBetween(start, end);
     }
+
+    public List<TripDTO> getTripsByUser(String userId) {
+        return tripRepository.findTripsByUser(userId);
+    }
 }

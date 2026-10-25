@@ -140,6 +140,23 @@ public class TripRepository {
         return list;
     }
 
+    public List<TripDTO> findTripsByUser(String userId) {
+        String sql = "SELECT * FROM trip_lifecycle_trips WHERE user_id = ? ORDER BY start_time DESC";
+        List<TripDTO> list = new ArrayList<>();
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapRow(rs));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao procurar viagens para utilizador " + userId, e);
+        }
+        return list;
+    }
+
     private TripDTO mapRow(ResultSet rs) throws SQLException {
         String endTimeStr = rs.getString("end_time");
         Long duration = rs.getObject("duration_minutes") != null ? rs.getLong("duration_minutes") : null;

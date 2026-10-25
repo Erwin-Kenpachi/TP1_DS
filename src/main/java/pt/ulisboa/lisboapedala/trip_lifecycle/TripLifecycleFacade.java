@@ -49,4 +49,8 @@ public class TripLifecycleFacade {
     public List<TripDTO> getCompletedTripsBetween(LocalDateTime start, LocalDateTime end) {
         return service.getCompletedTripsBetween(start, end);
     }
+
+    public List<TripDTO> getTripsByUser(String userId) {
+        return service.getTripsByUser(userId);
+    }
 }

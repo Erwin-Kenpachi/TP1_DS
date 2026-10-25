@@ -147,6 +147,20 @@ public class ModularMonolithArchitectureTest {
                     )
                     .because("reporting_audit só pode usar trip_lifecycle e station_availability");
 
+    // 9. Allowed-to-Use: history_reader só pode usar trip_lifecycle e tariff_billing
+    @ArchTest
+    public static final ArchRule history_reader_allowed_dependencies =
+            noClasses().that().resideInAPackage("pt.ulisboa.lisboapedala.history_reader..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "pt.ulisboa.lisboapedala.dock_access..",
+                            "pt.ulisboa.lisboapedala.station_availability..",
+                            "pt.ulisboa.lisboapedala.sensor_ingestion..",
+                            "pt.ulisboa.lisboapedala.maintenance_orders..",
+                            "pt.ulisboa.lisboapedala.fleet_redistribution..",
+                            "pt.ulisboa.lisboapedala.reporting_audit.."
+                    )
+                    .because("history_reader só pode usar trip_lifecycle e tariff_billing (ARCHITECTURE.md seção 3)");
+
     private static String extractModuleName(String packageName) {
         if (!packageName.startsWith(BASE_PACKAGE)) {
             return null;

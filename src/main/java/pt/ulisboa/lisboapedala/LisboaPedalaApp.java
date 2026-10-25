@@ -7,6 +7,9 @@ import pt.ulisboa.lisboapedala.dock_access.DockAccessFacade;
 import pt.ulisboa.lisboapedala.dock_access.ReturnBikeResponseDTO;
 import pt.ulisboa.lisboapedala.dock_access.UnlockBikeResponseDTO;
 import pt.ulisboa.lisboapedala.dock_access.presentation.DockController;
+import pt.ulisboa.lisboapedala.history_reader.HistoryReaderFacade;
+import pt.ulisboa.lisboapedala.history_reader.UserTripHistoryDTO;
+import pt.ulisboa.lisboapedala.history_reader.presentation.HistoryController;
 import pt.ulisboa.lisboapedala.station_availability.StationAvailabilityFacade;
 import pt.ulisboa.lisboapedala.station_availability.StationOccupancyDTO;
 import pt.ulisboa.lisboapedala.station_availability.presentation.StationController;
@@ -40,6 +43,7 @@ public class LisboaPedalaApp {
     private final DockController dockController;
     private final TripController tripController;
     private final BillingController billingController;
+    private final HistoryController historyController;
     private final Scanner scanner;
 
     /** Utilizador autenticado na sessao actual. */
@@ -54,11 +58,13 @@ public class LisboaPedalaApp {
         TariffBillingFacade billingFacade = new TariffBillingFacade(dbManager);
         TripLifecycleFacade tripFacade = new TripLifecycleFacade(dbManager, billingFacade, stationFacade);
         DockAccessFacade dockFacade = new DockAccessFacade(dbManager, tripFacade, stationFacade);
+        HistoryReaderFacade historyFacade = new HistoryReaderFacade(tripFacade, billingFacade);
 
         this.stationController = new StationController(stationFacade);
         this.dockController = new DockController(dockFacade);
         this.tripController = new TripController(tripFacade);
         this.billingController = new BillingController(billingFacade);
+        this.historyController = new HistoryController(historyFacade);
         this.scanner = new Scanner(System.in);
 
         seedStationsIfNeeded(stationFacade);
@@ -105,9 +111,10 @@ public class LisboaPedalaApp {
                 case "2" -> handleUnlockBike();
                 case "3" -> handleViewActiveTrip();
                 case "4" -> handleReturnBike();
-                case "5" -> handleViewInvoices();
-                case "6" -> handleSimulateOfflineReplay();
-                case "7" -> runAutoDemo();
+                case "5" -> handleViewUserHistory();
+                case "6" -> handleViewInvoices();
+                case "7" -> handleSimulateOfflineReplay();
+                case "8" -> runAutoDemo();
                 case "0" -> {
                     System.out.println("\nSessao terminada. Ate a proxima, " + currentUser.username() + "!");
                     running = false;
@@ -218,9 +225,10 @@ public class LisboaPedalaApp {
         System.out.println(" [2] Desbloquear bicicleta (Inicio de Viagem)");
         System.out.println(" [3] Consultar a minha viagem ativa");
         System.out.println(" [4] Devolver bicicleta (Fecho de Viagem e Cobranca)");
-        System.out.println(" [5] Consultar as minhas faturas");
-        System.out.println(" [6] Simular resiliencia offline e idempotencia (ADR-004)");
-        System.out.println(" [7] Executar demonstracao automatica completa");
+        System.out.println(" [5] Consultar historico unificado de viagens e faturas (history_reader)");
+        System.out.println(" [6] Consultar as minhas faturas");
+        System.out.println(" [7] Simular resiliencia offline e idempotencia (ADR-004)");
+        System.out.println(" [8] Executar demonstracao automatica completa");
         System.out.println(" [0] Terminar sessao");
         System.out.print("Escolhe uma opcao: ");
     }
@@ -367,6 +375,48 @@ public class LisboaPedalaApp {
             System.out.println("  Viagem concluida: " + res.tripId());
             System.out.println("\n>> A consultar fatura gerada automaticamente...");
             billingController.getInvoiceByTrip(res.tripId()).ifPresent(this::printInvoice);
+        }
+    }
+
+    private void handleViewUserHistory() {
+        System.out.println("\n--- HISTÓRICO UNIFICADO DE VIAGENS E FATURAS (history_reader - US-8) ---");
+        List<UserTripHistoryDTO> history = historyController.getUserHistory(currentUser.userId());
+        if (history.isEmpty()) {
+            System.out.println("Ainda não tens viagens registadas no teu histórico.");
+            return;
+        }
+
+        System.out.printf("Total de viagens registadas para %s: %d%n", currentUser.username(), history.size());
+        int index = 1;
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        for (UserTripHistoryDTO entry : history) {
+            TripDTO trip = entry.trip();
+            InvoiceDTO inv = entry.invoice();
+
+            System.out.println("\n+-------------------------------------------------------------------------------+");
+            System.out.printf("| [%d] VIAGEM: %-32s  Estado: %-15s |%n", index++, trip.tripId(), trip.status());
+            System.out.printf("|     Bicicleta: %-16s | Levantada em: %-25s |%n", trip.bikeId(), trip.startStationId());
+            System.out.printf("|     Início:    %-16s | Fim:          %-25s |%n",
+                    trip.startTime() != null ? trip.startTime().format(dtf) : "N/A",
+                    trip.endTime() != null ? trip.endTime().format(dtf) : "(Em curso)");
+            System.out.printf("|     Devolvida em: %-13s | Duração:      %-25s |%n",
+                    trip.endStationId() != null ? trip.endStationId() : "N/A",
+                    trip.durationMinutes() != null ? trip.durationMinutes() + " minutos" : "N/A");
+
+            if (entry.hasInvoice()) {
+                System.out.println("| . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . |");
+                System.out.printf("|     FATURA FISCAL: %-18s | Valor: %.2f EUR (IVA: %.2f EUR)       |%n",
+                        inv.invoiceId(), inv.amountCents() / 100.0, inv.taxCents() / 100.0);
+                System.out.printf("|     Método:        %-18s | Código AT: %-23s |%n",
+                        inv.paymentMethod(), inv.atFiscalCode());
+                System.out.printf("|     Emitida em:    %-18s | Estado Fatura: %-19s |%n",
+                        inv.issuedAt(), inv.status());
+            } else if ("IN_PROGRESS".equals(trip.status())) {
+                System.out.println("|     [Viagem em curso - fatura será emitida automaticamente após devolução]     |");
+            } else {
+                System.out.println("|     [Sem fatura associada]                                                    |");
+            }
+            System.out.println("+-------------------------------------------------------------------------------+");
         }
     }
 
