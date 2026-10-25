@@ -21,7 +21,9 @@ Deves respeitar rigorosamente as diretrizes arquiteturais definidas em ARCHITECT
 Valida a implementação garantindo que o código passa sem erros no teste arquitetural ArchUnit (ModularMonolithArchitectureTest).
 
 ## 2. Resultado da Geração
-- **Resultado:** Positivo 
-- **Justificação:** 
+- **Resultado:** Positivo, correu bem sem problemas.
+- **Justificação:** A ferramenta gerou o módulo `history_reader` respeitando estritamente o princípio de componente de leitura puro. O código utiliza exclusivamente as fachadas públicas de `trip_lifecycle` e `tariff_billing`, emprega DTOs imutáveis (`UserTripHistoryDTO`, `TripReceiptDetailsDTO`) e não introduz qualquer esquema de persistência próprio, cumprindo na íntegra o ADR-002, ADR-005 e ADR-006.
 
 ## 3. Deteção de Violações Arquiteturais
+- **Violações Detetadas:** Nenhuma.
+- **Mecanismo de Verificação:** A suite de testes arquiteturais (ArchUnit / `ModularMonolithArchitectureTest`) correu com sucesso e validou que o módulo `history_reader` cumpre a matriz *Allowed-to-Use* (dependendo apenas de `trip_lifecycle` e `tariff_billing` para efeitos de leitura) sem efetuar acessos diretos a pacotes internos ou bases de dados externas.

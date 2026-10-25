@@ -1,4 +1,5 @@
-### Prompt 6
+### Prompt 8
+
 [Contexto fornecido: ARCHITECTURE.md, adr/ADR-002.md, adr/ADR-003.md, adr/ADR-005.md, adr/ADR-006.md, docs/01-caracteristicas.md, docs/02-componentes.md, docs/03-particionamento-e-vistas.md]
 
 Por favor, implementa exclusivamente o módulo de domínio `fleet_redistribution` em Java 21 para o sistema Lisboa Pedala, com o propósito de calcular desequilíbrios na rede de 180 estações e gerar rotas otimizadas de rebalanceamento de bicicletas para as 6 carrinhas municipais (US-5), prevenindo ruturas de stock ou sobrelotação de docas que ameacem o contrato de concessão.

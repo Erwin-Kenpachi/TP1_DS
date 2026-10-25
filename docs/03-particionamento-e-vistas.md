@@ -166,7 +166,7 @@ As dependências entre os módulos de domínio obedecem às seguintes regras res
 | `station_availability` | *(Nenhum)* | Todos os outros |
 | `sensor_ingestion` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
 | `fleet_redistribution` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
-| `maintenance_orders` | `station_availability` | Módulos de negócio crítico |
+| `maintenance_orders` | `sensor_ingestion` | Módulos de negócio crítico |
 | `history_reader` |  `tariff_billing`,`trip_lifecycle`| Todos os outros
 | `reporting_audit` | Todos os módulos de leitura (em modo de agregação) | Modificação direta de estado |
 
