@@ -10,6 +10,12 @@ import pt.ulisboa.lisboapedala.dock_access.presentation.DockController;
 import pt.ulisboa.lisboapedala.history_reader.HistoryReaderFacade;
 import pt.ulisboa.lisboapedala.history_reader.UserTripHistoryDTO;
 import pt.ulisboa.lisboapedala.history_reader.presentation.HistoryController;
+import pt.ulisboa.lisboapedala.maintenance_orders.MaintenanceOrderDTO;
+import pt.ulisboa.lisboapedala.maintenance_orders.MaintenanceOrdersFacade;
+import pt.ulisboa.lisboapedala.maintenance_orders.presentation.MaintenanceController;
+import pt.ulisboa.lisboapedala.sensor_ingestion.BikeHealthStatusDTO;
+import pt.ulisboa.lisboapedala.sensor_ingestion.SensorIngestionFacade;
+import pt.ulisboa.lisboapedala.sensor_ingestion.presentation.TelemetryController;
 import pt.ulisboa.lisboapedala.station_availability.StationAvailabilityFacade;
 import pt.ulisboa.lisboapedala.station_availability.StationOccupancyDTO;
 import pt.ulisboa.lisboapedala.station_availability.presentation.StationController;
@@ -44,6 +50,10 @@ public class LisboaPedalaApp {
     private final TripController tripController;
     private final BillingController billingController;
     private final HistoryController historyController;
+    private final SensorIngestionFacade sensorFacade;
+    private final TelemetryController telemetryController;
+    private final MaintenanceOrdersFacade maintenanceFacade;
+    private final MaintenanceController maintenanceController;
     private final Scanner scanner;
 
     /** Utilizador autenticado na sessao actual. */
@@ -59,12 +69,18 @@ public class LisboaPedalaApp {
         TripLifecycleFacade tripFacade = new TripLifecycleFacade(dbManager, billingFacade, stationFacade);
         DockAccessFacade dockFacade = new DockAccessFacade(dbManager, tripFacade, stationFacade);
         HistoryReaderFacade historyFacade = new HistoryReaderFacade(tripFacade, billingFacade);
+        SensorIngestionFacade sensorFacade = new SensorIngestionFacade(dbManager);
+        MaintenanceOrdersFacade maintenanceFacade = new MaintenanceOrdersFacade(dbManager, sensorFacade, stationFacade);
 
         this.stationController = new StationController(stationFacade);
         this.dockController = new DockController(dockFacade);
         this.tripController = new TripController(tripFacade);
         this.billingController = new BillingController(billingFacade);
         this.historyController = new HistoryController(historyFacade);
+        this.sensorFacade = sensorFacade;
+        this.telemetryController = new TelemetryController(sensorFacade);
+        this.maintenanceFacade = maintenanceFacade;
+        this.maintenanceController = new MaintenanceController(maintenanceFacade);
         this.scanner = new Scanner(System.in);
 
         seedStationsIfNeeded(stationFacade);
@@ -104,22 +120,10 @@ public class LisboaPedalaApp {
         // Menu principal (sessao iniciada)
         boolean running = true;
         while (running) {
-            printMainMenu();
-            String option = scanner.nextLine().trim();
-            switch (option) {
-                case "1" -> listStations();
-                case "2" -> handleUnlockBike();
-                case "3" -> handleViewActiveTrip();
-                case "4" -> handleReturnBike();
-                case "5" -> handleViewUserHistory();
-                case "6" -> handleViewInvoices();
-                case "7" -> handleSimulateOfflineReplay();
-                case "8" -> runAutoDemo();
-                case "0" -> {
-                    System.out.println("\nSessao terminada. Ate a proxima, " + currentUser.username() + "!");
-                    running = false;
-                }
-                default -> System.out.println("Opcao invalida. Por favor escolhe uma das opcoes do menu.");
+            if (currentUser.isTechnician()) {
+                running = handleTechnicianMenu();
+            } else {
+                running = handleCyclistMenu();
             }
         }
         dbManager.close();
@@ -160,8 +164,12 @@ public class LisboaPedalaApp {
             return false;
         }
         currentUser = profileOpt.get();
-        System.out.println("\nBem-vindo(a), " + currentUser.username() + "!"
-                + (currentUser.isSubscriber() ? "  [Assinante Passe Anual]" : "  [Utilizador Ocasional]"));
+        if (currentUser.isTechnician()) {
+            System.out.println("\nBem-vindo(a), Técnico(a) " + currentUser.username() + "!  [Painel de Manutenção]");
+        } else {
+            System.out.println("\nBem-vindo(a), " + currentUser.username() + "!"
+                    + (currentUser.isSubscriber() ? "  [Assinante Passe Anual]" : "  [Utilizador Ocasional]"));
+        }
         return true;
     }
 
@@ -195,10 +203,18 @@ public class LisboaPedalaApp {
             payMethod = "MBWAY";
         }
 
-        String userId = "USER-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-        boolean ok = userRepository.register(userId, username, password, isSubscriber, payMethod);
+        System.out.println("\nTipo de conta:");
+        System.out.println("  [1] Ciclista (Cliente / Assinante)");
+        System.out.println("  [2] Técnico de Manutenção (US-2)");
+        System.out.print("Escolhe o tipo (default: 1): ");
+        String roleInput = scanner.nextLine().trim();
+        String userType = roleInput.equals("2") ? "TECHNICIAN" : "CYCLIST";
+
+        String prefix = userType.equals("TECHNICIAN") ? "TECH-" : "USER-";
+        String userId = prefix + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        boolean ok = userRepository.register(userId, username, password, isSubscriber, payMethod, userType);
         if (ok) {
-            System.out.println("Conta criada com sucesso! Ja podes iniciar sessao.");
+            System.out.println("Conta criada com sucesso (" + (userType.equals("TECHNICIAN") ? "Técnico" : "Ciclista") + ")! Já podes iniciar sessão.");
         } else {
             System.out.println("Erro ao criar conta. Tenta novamente.");
         }
@@ -213,6 +229,27 @@ public class LisboaPedalaApp {
         System.out.println("                 SISTEMA LISBOA PEDALA - MONOLITO MODULAR                      ");
         System.out.println("                      Simulador Interativo da US-1                             ");
         System.out.println("================================================================================");
+    }
+
+    private boolean handleCyclistMenu() {
+        printMainMenu();
+        String option = scanner.nextLine().trim();
+        switch (option) {
+            case "1" -> listStations();
+            case "2" -> handleUnlockBike();
+            case "3" -> handleViewActiveTrip();
+            case "4" -> handleReturnBike();
+            case "5" -> handleViewUserHistory();
+            case "6" -> handleViewInvoices();
+            case "7" -> handleSimulateOfflineReplay();
+            case "8" -> runAutoDemo();
+            case "0" -> {
+                System.out.println("\nSessao terminada. Ate a proxima, " + currentUser.username() + "!");
+                return false;
+            }
+            default -> System.out.println("Opcao invalida. Por favor escolhe uma das opcoes do menu.");
+        }
+        return true;
     }
 
     private void printMainMenu() {
@@ -503,5 +540,155 @@ public class LisboaPedalaApp {
         System.out.printf("| Validacao AT: %-44s |%n", inv.atFiscalCode());
         System.out.println("| Retencao:     10 anos garantidos (ADR-006)                  |");
         System.out.println("+-------------------------------------------------------------+");
+    }
+
+    // -------------------------------------------------------------------------
+    // Painel e Operações do Técnico de Manutenção (US-2)
+    // -------------------------------------------------------------------------
+
+    private boolean handleTechnicianMenu() {
+        System.out.println("\n================================================================================");
+        System.out.println("                 PAINEL DE CAMPO - TÉCNICO DE MANUTENÇÃO (US-2)                ");
+        System.out.println(" Sessão: " + currentUser.username() + "  |  Técnico de Manutenção");
+        System.out.println("================================================================================");
+        System.out.println(" [1] Ver ordens de manutenção ativas (Pool geral de avarias)");
+        System.out.println(" [2] Concluir ordem de manutenção (marcar bicicleta como reparada)");
+        System.out.println(" [3] Simular bicicleta a reportar avaria (Telemetria IoT - Avaria A)");
+        System.out.println(" [4] Consultar telemetria e estado de saúde de uma bicicleta");
+        System.out.println(" [5] Ver disponibilidade das estações");
+        System.out.println(" [0] Terminar sessão");
+        System.out.print("Escolhe uma opção: ");
+
+        String option = scanner.nextLine().trim();
+        switch (option) {
+            case "1" -> handleViewActiveMaintenanceOrders();
+            case "2" -> handleCompleteMaintenanceOrder();
+            case "3" -> handleSimulateBikeMalfunction();
+            case "4" -> handleViewBikeHealth();
+            case "5" -> listStations();
+            case "0" -> {
+                System.out.println("\nSessão de técnico terminada. Até à próxima, " + currentUser.username() + "!");
+                return false;
+            }
+            default -> System.out.println("Opção inválida. Por favor escolhe uma das opções do menu.");
+        }
+        return true;
+    }
+
+    private void handleViewActiveMaintenanceOrders() {
+        System.out.println("\n--- ORDENS DE MANUTENÇÃO ATIVAS NO SISTEMA (VISÍVEL A TODOS OS TÉCNICOS) ---");
+        List<MaintenanceOrderDTO> active = maintenanceController.getActiveOrders();
+        if (active.isEmpty()) {
+            System.out.println("Excelente! Não existem avarias pendentes de reparação no momento.");
+            return;
+        }
+        System.out.printf("Total de avarias ativas que requerem intervenção: %d%n", active.size());
+        printOrdersTable(active);
+    }
+
+    private void handleCompleteMaintenanceOrder() {
+        System.out.println("\n--- CONCLUIR ORDEM DE MANUTENÇÃO (REPARAÇÃO CONCLUÍDA) ---");
+        List<MaintenanceOrderDTO> active = maintenanceController.getActiveOrders();
+        if (active.isEmpty()) {
+            System.out.println("Não existem ordens de manutenção ativas para concluir.");
+            return;
+        }
+        printOrdersTable(active);
+
+        System.out.print("\nIntroduz o ID da ordem resolvida (ex: MO-...): ");
+        String orderId = scanner.nextLine().trim().toUpperCase();
+        if (orderId.isBlank()) {
+            System.out.println("ID inválido.");
+            return;
+        }
+
+        try {
+            MaintenanceOrderDTO resolved = maintenanceController.completeOrder(orderId);
+            System.out.println("SUCESSO: Ordem " + resolved.orderId() + " marcada como RESOLVIDA!");
+            System.out.println("  Bicicleta: " + resolved.bikeId() + " reparada e pronta a circular.");
+            System.out.println("  Data/Hora de resolução: " + resolved.resolvedAt());
+            if (resolved.anomalyId() != null) {
+                System.out.println("  A anomalia IoT (" + resolved.anomalyId() + ") foi marcada como limpa e resolvida em sensor_ingestion.");
+            }
+        } catch (Exception e) {
+            System.out.println("FALHA: " + e.getMessage());
+        }
+    }
+
+    private void handleSimulateBikeMalfunction() {
+        System.out.println("\n--- SIMULAÇÃO: BICICLETA REPORTA AVARIA (AVARIA A - TELEMETRIA IoT) ---");
+        System.out.println("Como a bicicleta reporta a avaria automaticamente?");
+        System.out.println("  [1] Telemetria IoT: Bateria Crítica (8.5%) em andamento -> Deteção automática por sensor_ingestion");
+        System.out.println("  [2] Telemetria IoT: Falha grave de Travões (BRAKE_FAULT) -> Deteção automática por sensor_ingestion");
+        System.out.print("Escolhe o tipo de telemetria IoT (1-2): ");
+        String simOpt = scanner.nextLine().trim();
+
+        System.out.print("Identificador da bicicleta (ex: BIKE-E-100, default: BIKE-E-88): ");
+        String bikeId = scanner.nextLine().trim().toUpperCase();
+        if (bikeId.isBlank()) {
+            bikeId = "BIKE-E-88";
+        }
+
+        switch (simOpt) {
+            case "1" -> {
+                System.out.println("\n>> 1. Bicicleta " + bikeId + " transmite telemetria com Bateria = 8.5%...");
+                sensorFacade.ingestTelemetry(new pt.ulisboa.lisboapedala.sensor_ingestion.TelemetryDTO(
+                        bikeId, 8.5, 38.710, -9.140, 15.0, "OK", java.time.Instant.now()
+                ));
+                System.out.println(">> 2. sensor_ingestion processa pacote e deteta anomalia crítica: CRITICAL_BATTERY!");
+                int created = maintenanceController.syncSensorAnomalies();
+                System.out.printf("🚨 3. ORDEM DE MANUTENÇÃO GERADA AUTOMATICAMENTE! (%d nova ordem)%n", created);
+                System.out.println("   Alerta emitido: todos os técnicos têm agora acesso a esta ordem na pool de ordens ativas.");
+                System.out.println(">> Consulta as avarias ativas na opção [1] do menu.");
+            }
+            case "2" -> {
+                System.out.println("\n>> 1. Bicicleta " + bikeId + " transmite código de falha nos travões (BRAKE_FAULT)...");
+                sensorFacade.ingestTelemetry(new pt.ulisboa.lisboapedala.sensor_ingestion.TelemetryDTO(
+                        bikeId, 75.0, 38.720, -9.150, 12.0, "BRAKE_FAULT", java.time.Instant.now()
+                ));
+                System.out.println(">> 2. sensor_ingestion processa pacote e deteta anomalia crítica: BRAKE_FAILURE!");
+                int created = maintenanceController.syncSensorAnomalies();
+                System.out.printf("🚨 3. ORDEM DE MANUTENÇÃO GERADA AUTOMATICAMENTE! (%d nova ordem)%n", created);
+                System.out.println("   Alerta emitido: todos os técnicos têm agora acesso a esta ordem na pool de ordens ativas.");
+                System.out.println(">> Consulta as avarias ativas na opção [1] do menu.");
+            }
+            default -> System.out.println("Opção de telemetria inválida.");
+        }
+    }
+
+    private void handleViewBikeHealth() {
+        System.out.println("\n--- CONSULTAR ESTADO DE SAÚDE DE BICICLETA (sensor_ingestion) ---");
+        System.out.print("Identificador da bicicleta: ");
+        String bikeId = scanner.nextLine().trim().toUpperCase();
+        if (bikeId.isBlank()) {
+            System.out.println("ID inválido.");
+            return;
+        }
+
+        BikeHealthStatusDTO health = sensorFacade.getBikeHealthStatus(bikeId);
+        int alertsCount = health.activeAlerts() != null ? health.activeAlerts().size() : 0;
+        boolean suitable = "OPERATIONAL".equalsIgnoreCase(health.healthStatus());
+
+        System.out.println("+---------------- ESTADO OPERACIONAL DA BICICLETA ----------------+");
+        System.out.printf("| Bicicleta ID:        %-42s |%n", health.bikeId());
+        System.out.printf("| Nível Bateria:       %-42s |%n", health.batteryLevel() >= 0 ? String.format("%.1f %%", health.batteryLevel()) : "Sem telemetria");
+        System.out.printf("| Estado de Saúde:     %-42s |%n", health.healthStatus());
+        System.out.printf("| Estado dos Travões:  %-42s |%n", health.brakeStatus());
+        System.out.printf("| Anomalias Ativas:    %-42d |%n", alertsCount);
+        System.out.printf("| Aptidão p/ Viagem:   %-42s |%n", suitable ? "SIM (Segura)" : "NÃO (Requer Manutenção)");
+        System.out.println("+-----------------------------------------------------------------+");
+    }
+
+    private void printOrdersTable(List<MaintenanceOrderDTO> orders) {
+        System.out.println("+---------------------------------------------------------------------------------------------------------------+");
+        System.out.printf("| %-22s | %-14s | %-12s | %-45s |%n",
+                "Ordem ID", "Bicicleta", "Estado", "Descrição");
+        System.out.println("+---------------------------------------------------------------------------------------------------------------+");
+        for (MaintenanceOrderDTO o : orders) {
+            String desc = o.description().length() > 45 ? o.description().substring(0, 42) + "..." : o.description();
+            System.out.printf("| %-22s | %-14s | %-12s | %-45s |%n",
+                    o.orderId(), o.bikeId(), o.status(), desc);
+        }
+        System.out.println("+---------------------------------------------------------------------------------------------------------------+");
     }
 }
