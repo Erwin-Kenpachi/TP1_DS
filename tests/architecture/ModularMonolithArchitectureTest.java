@@ -161,6 +161,21 @@ public class ModularMonolithArchitectureTest {
                     )
                     .because("history_reader só pode usar trip_lifecycle e tariff_billing (ARCHITECTURE.md seção 3)");
 
+    // 10. Allowed-to-Use: fleet_redistribution só pode usar station_availability
+    @ArchTest
+    public static final ArchRule fleet_redistribution_allowed_dependencies =
+            noClasses().that().resideInAPackage("pt.ulisboa.lisboapedala.fleet_redistribution..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "pt.ulisboa.lisboapedala.dock_access..",
+                            "pt.ulisboa.lisboapedala.trip_lifecycle..",
+                            "pt.ulisboa.lisboapedala.tariff_billing..",
+                            "pt.ulisboa.lisboapedala.sensor_ingestion..",
+                            "pt.ulisboa.lisboapedala.maintenance_orders..",
+                            "pt.ulisboa.lisboapedala.reporting_audit..",
+                            "pt.ulisboa.lisboapedala.history_reader.."
+                    )
+                    .because("fleet_redistribution só pode usar station_availability (ARCHITECTURE.md seção 3)");
+
     private static String extractModuleName(String packageName) {
         if (!packageName.startsWith(BASE_PACKAGE)) {
             return null;
