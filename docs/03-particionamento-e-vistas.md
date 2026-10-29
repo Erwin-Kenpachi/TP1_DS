@@ -193,7 +193,8 @@ dock_access/
 │   ├── DockingService.java                 # Lógica de confirmação de encaixe e leitura de sensores da doca
 │   └── BufferService.java                  # Gere o buffer temporário ou reentras de comunicação offline
 └── persistence/                            # Camada de Persistência de Dados
-    └── DockRepository.java                 # Comunica com a base de dados para atualizar o estado físico da doca
+    ├── DockEventRepository.java            # Comunica com a base de dados para registo duradouro de eventos de doca
+    └── schema.sql                          # DDL da tabela privada 'dock_access_events'
 
 station_availability/
 ├── StationAvailabilityFacade.java · API pública # Fachada que expõe apenas os contratos permitidos para os outros módulos
@@ -224,7 +225,7 @@ sensor_ingestion/
 
 
 trip_lifecycle/
-├── index/ (ou TripLifecycleApi.java)      # Interface pública (Fachada do módulo)
+├── TripLifecycleFacade.java · API pública  # Fachada pública do módulo
 │   ├── startTrip()                      # Inicia uma nova viagem (chamado por dock_access)
 │   ├── completeTrip()                   # Encerra a viagem e calcula duração (chamado por dock_access)
 │   ├── getActiveTrip()                  # Consulta viagem em curso de um utilizador (para a app)
@@ -241,7 +242,7 @@ trip_lifecycle/
     └── schema.sql                       # DDL da tabela 'trips' (propriedade exclusiva deste módulo)
 
 tariff_billing/
-├── index/ (ou TariffBillingApi.java)      # Interface pública do módulo (único ponto de entrada para outros módulos)
+├── TariffBillingFacade.java · API pública  # Fachada pública do módulo (único ponto de entrada para outros módulos)
 │   ├── processTripBilling()             # Calcula valor, cobra e gera fatura (chamado por trip_lifecycle)
 │   ├── getInvoiceByTripId()             # Consulta a fatura associada a uma viagem
 │   └── getUserInvoices()                # Lista todas as faturas de um determinado utilizador
@@ -260,7 +261,7 @@ tariff_billing/
 
 
 reporting_audit/
-├── index/ (ou ReportingAuditApi.java)     # Interface pública
+├── ReportingAuditFacade.java · API pública # Fachada pública do módulo
 │   ├── generateMonthlyReport()          # Gera e devolve o relatório mensal municipal consolidado
 │   └── getStationOpenData()             # Prepara métricas agregadas de estações para dados abertos
 ├── presentation/
@@ -275,7 +276,7 @@ reporting_audit/
     └── schema.sql                       # DDL da tabela privada 'monthly_reports'
 
 history_reader/
-├── index/ (ou HistoryReaderApi.java)      # Interface pública
+├── HistoryReaderFacade.java · API pública  # Fachada pública do módulo
 │   ├── getUserCompleteHistory()         # Devolve a lista unificada de viagens com as respetivas faturas
 │   └── getTripReceiptDetails()          # Devolve o detalhe de uma viagem específica com o recibo fiscal associado
 ├── presentation/
@@ -284,10 +285,10 @@ history_reader/
 │   ├── HistoryAggregationService.java   # Consulta trip_lifecycle e tariff_billing e faz o "merge" dos dados
 │   └── UserTripHistoryDTO.java          # Objeto de transferência: dados da viagem (hora, estações) + fatura (valor, estado, link AT)
 └── persistence/
-    └──schema.sql   
+    # Nota: Sem persistência própria nem schema.sql (conforme ADR-002 e ADR-006)
 
 fleet_redistribution/
-├── Fleet_redistribution.java (ou Pacote Fachada) · API pública
+├── FleetRedistributionFacade.java · API pública
 │   └── getActiveRoutes()      
 ├── presentation/
 │   └── RouteReader.java           # Controlador REST / Ponto de entrada
@@ -295,10 +296,11 @@ fleet_redistribution/
 │   ├── CalculateRoutes.java             # Lógica central do algoritmo de otimização de frota
 │   └── RoutingClientService.java       # Cena para comunicar com mapa ns se é preciso
 └── persistence/
-    └── RedistributionRepository.java # Acesso à base de dados
+    ├── RedistributionRepository.java # Acesso à base de dados
+    └── schema.sql                    # DDL da tabela privada 'fleet_redistribution_routes'
 
 maintenance_orders/
-├── MaintenanceFacade.java · API pública     # Fachada que expõe os contratos permitidos para os outros módulos
+├── MaintenanceOrdersFacade.java · API pública # Fachada que expõe os contratos permitidos para os outros módulos
 │   ├── createMaintenanceOrder()            # Permite reportar uma avaria (numa doca ou bicicleta) e abrir ordem de reparação
 │   └── getPendingOrders()                  # Devolve a lista de manutenções pendentes para a equipa técnica
 ├── presentation/                           # Camada de Apresentação
@@ -307,7 +309,7 @@ maintenance_orders/
 │   ├── TicketService.java                  # Gere o ciclo de vida da avaria (aberta, em progresso, resolvida)
 │   └── TechnicianAssignmentService.java    # Lógica de atribuição de ordens de serviço aos técnicos disponíveis
 └── persistence/                            # Camada de Persistência de Dados
-    ├── MaintenanceRepository.java          # Comunica com a base de dados para gravar o registo de avarias
+    ├── MaintenanceOrderRepository.java     # Comunica com a base de dados para gravar o registo de avarias
     └── schema.sql (1 tabela)               # Tabela que guarda os detalhes das ordens de manutenção, estado e histórico
 ```
 ### Regras Allowed-to-Use
