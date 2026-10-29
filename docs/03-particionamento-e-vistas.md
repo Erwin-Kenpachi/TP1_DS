@@ -6,7 +6,7 @@ Este documento especifica a organização estrutural e as vistas arquiteturais d
 
 O objetivo é definir a organização do código-fonte em tempo de desenvolvimento, explicitar as dependências permitidas entre módulos e descrever a colaboração entre componentes durante a execução dos principais casos de utilização. Pretende-se reduzir o acoplamento, aumentar a coesão e facilitar a evolução e a verificação da arquitetura.
 
-O documento apresenta as seguintes vistas:
+O documento apresenta os seguintes componentes:
 
 1. **Particionamento de topo e trade-offs:** comparação entre uma organização técnica por camadas e uma organização por domínio, justificando a opção selecionada.
 2. **Vista de módulos e regras `Allowed-to-Use`:** organização dos módulos de topo e definição das dependências permitidas e proibidas.
@@ -248,7 +248,7 @@ tariff_billing/
 ├── presentation/
 │   └── BillingController.java           # Endpoints REST (ex: GET /api/v1/invoices/{id}, GET /api/v1/invoices/download)
 ├── business/
-│   ├── TariffCalculator.java            # Aplica regras de preço (45 min grátis passe anual, blocos 15 min, avulso ocasionais)
+│   ├── TariffCalculator.java            # Aplica regras de preço (45 min grátis passe anual, blocos 15 min, além de utilizador normal)
 │   ├── BillingService.java              # Orquestra cobrança, geração de fatura e comunicação com a AT
 │   ├── Invoice.java                     # Entidade de domínio: id, tripId, userId, amount, tax, issuedAt, status
 │   └── adapters/                        # Adaptadores para serviços externos
@@ -408,28 +408,22 @@ Para facilitar a manutenção do sistema, cada módulo deve ter um responsável 
 
 ### 5.3. Gestão da responsabilidade pelo código com `CODEOWNERS`
 
-A responsabilidade sobre o código-fonte pode ser registada num ficheiro `CODEOWNERS`, colocado, por exemplo, em `.github/CODEOWNERS`. Este ficheiro associa os caminhos do repositório aos respetivos responsáveis e pode ser utilizado para encaminhar pedidos de revisão de código.
-
-Exemplo de estrutura, a adaptar aos nomes de utilizador reais do repositório:
 
 ```text
 # Módulos de domínio
-/dock_access/             @utilizador_a
-/trip_lifecycle/          @utilizador_b
-/tariff_billing/          @utilizador_c
-/station_availability/    @utilizador_d
-/sensor_ingestion/        @utilizador_e
-/fleet_redistribution/    @utilizador_f
-/maintenance_orders/      @utilizador_g
-/reporting_audit/         @utilizador_h
+/dock_access/             @Tiago
+/trip_lifecycle/          @Tiago
+/tariff_billing/          @Tiago
+/station_availability/    @Tiago
+/sensor_ingestion/        @Diogo
+/fleet_redistribution/    @Tiago
+/maintenance_orders/      @Tiago
+/reporting_audit/         @Diogo
 
 # Testes e regras arquiteturais
-/tests/architecture/      @responsavel_arquitetura
+/tests/architecture/      @Tiago e Diogo
 ```
 
-Os identificadores acima são apenas ilustrativos e devem ser substituídos pelos utilizadores ou equipas existentes no repositório. Se um elemento for responsável por vários módulos, o mesmo identificador poderá aparecer em várias regras.
-
-A existência do ficheiro `CODEOWNERS` não garante, por si só, que todas as alterações sejam aprovadas pelo responsável. A exigência de revisão pelos *code owners* depende também das regras de proteção de branches e das configurações do repositório.
 
 
 

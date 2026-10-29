@@ -46,12 +46,13 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
 | `reporting_audit` | Agregar métricas operacionais para os relatórios municipais mensais. | 0 | 1 | 1.0 |
 | `history_reader` | Permitir ao utilizador consultar o seu histórico de viagens e faturas. | 0 | 2 | 1.0 |
 
-![Diagrama da Arquitetura Lógica do Lisboa Pedala](./assets/diagrama-final.png)
+
+![Diagrama da Arquitetura Lógica do Lisboa Pedala](../figuras/arquiteturaLogica.jpg)
 
 # User Stories
 | Identificador | User Story | Componente(s) Envolvido(s) | Papel de Cada Componente no Fluxo |
 | :--- | :--- | :--- | :--- |
-| **US-1** (Obrigatória) | "Como assinante, desbloqueio e devolvo uma bicicleta e a viagem fica registada e cobrada." | `1. dock_access`<br>`2. trip_lifecycle`<br>`3. tariff_billing`<br>`4. user_history` | **dock_access:** valida credencial (QR/Navegante) e desbloqueia a doca onde se encontra a bicicleta.<br>**trip_lifecycle:** regista início, calcula duração e emite alerta de 45 min.<br>**tariff_billing:** aplica tarifário de blocos de 15 min e emite fatura.<br>**user_history:** regista a viagem e a fatura referente à mesma no histórico do user. |
+| **US-1** (Obrigatória) | "Como assinante, desbloqueio e devolvo uma bicicleta e a viagem fica registada e cobrada." | `1. dock_access`<br>`2. trip_lifecycle`<br>`3. tariff_billing`<br>`4. user_history` | **dock_access:** valida credencial (QR/Navegante) e desbloqueia a doca onde se encontra a bicicleta.<br>**trip_lifecycle:** regista início e final da viagem, calcula duração e emite alerta de 45 min.<br>**tariff_billing:** aplica tarifário de blocos de 15 min e emite fatura.<br>**user_history:** regista a viagem e a fatura referente à mesma no histórico do user. |
 | **US-2** | "Como técnico, recebo uma ordem de manutenção quando uma bicicleta reporta avaria." | `1. sensor_ingestion`<br>`2. maintenance_orders` | **sensor_ingestion:** deteta anomalia técnica (bateria crítica/travões).<br>**maintenance_orders:** abre, atribui e faz a gestão do ciclo de vida da reparação. |
 | **US-3** | "Como doca sem rede, reenvio os eventos guardados quando a rede volta, sem duplicar viagens." | `1. dock_access`<br>`2. trip_lifecycle`<br>`3. tariff_billing` | **dock_access:** recebe a informação offline (até 24 h) e garante que não há repetição nem dados perdidos.<br>**trip_lifecycle:** reconstrói o trajeto/duração sem duplicar a viagem.<br>**tariff_billing:** valida unicidade da cobrança e fatura uma só vez. |
 | **US-4** | "Como gestor municipal, obtenho o relatório de utilização por freguesia" | `1. trip_lifecycle`<br>`2. reporting_audit` | **trip_lifecycle:** disponibiliza dados históricos de viagens concluídas.<br>**reporting_audit:** agrega as viagens por freguesia, calcula estimativa de CO2 e exporta relatório. |
@@ -81,7 +82,7 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
 # Conascência - nivel de dependencias 
 
 1. **`sensor_ingestion` e `station_availability`:** 
-   A bicicleta elétrica envia pacotes de coordenadas GPS a cada 30 segundos. Se o `telemetry_ingestion` enviar a localização num formato de tuplo (latitude, longitude) em graus, o `station_availability` tem de assumir exatamente a mesma convenção para calcular se a bicicleta está dentro do raio de uma estação. Se um mudar a ordem para (longitude, latitude), o mapa fica completamente desconfigurado. 
+   A bicicleta elétrica envia pacotes de coordenadas GPS a cada 30 segundos. Se o `sensor_ingestion` enviar a localização num formato de tuplo (latitude, longitude) em graus, o `station_availability` tem de assumir exatamente a mesma convenção para calcular se a bicicleta está dentro do raio de uma estação. Se um mudar a ordem para (longitude, latitude), o mapa fica completamente desconfigurado. 
 
 2. **`dock_access` e `trip_lifecycle`:** 
    A doca física envia um evento quando a bicicleta é bloqueada. Ambos têm de partilhar a convenção do que significa "sucesso", por exemplo, o código de estado lock_status: 1 ou a string "LOCKED". 

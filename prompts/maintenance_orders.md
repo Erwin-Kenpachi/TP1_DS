@@ -73,9 +73,9 @@ Deves respeitar rigorosamente as diretrizes arquiteturais definidas em ARCHITECT
 ---
 
 ## 2. Resultado da Geração
-- **Decisão:** 
-- **Justificação:** 
+- **Decisão:*Quase totalmente positivo* 
+- **Justificação:*Unico defeito foi ter adicionado acesso à Station avaiblity na facade* 
 
 ## 3. Deteção de Violações Arquiteturais
-- **Houve violação da arquitetura?:** 
-- **Descrição da ocorrência:**
+- **Houve violação da arquitetura?:*Houve* 
+- **Descrição da ocorrência:*Deu acesso à Station avaiblity na facade*
