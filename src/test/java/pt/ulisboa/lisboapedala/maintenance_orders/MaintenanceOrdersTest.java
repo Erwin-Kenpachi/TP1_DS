@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import pt.ulisboa.lisboapedala.common.DatabaseManager;
 import pt.ulisboa.lisboapedala.sensor_ingestion.BikeAnomalyEventDTO;
 import pt.ulisboa.lisboapedala.sensor_ingestion.SensorIngestionFacade;
-import pt.ulisboa.lisboapedala.station_availability.StationAvailabilityFacade;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,15 +17,13 @@ class MaintenanceOrdersTest {
 
     private DatabaseManager databaseManager;
     private SensorIngestionFacade sensorIngestionFacade;
-    private StationAvailabilityFacade stationAvailabilityFacade;
     private MaintenanceOrdersFacade maintenanceOrdersFacade;
 
     @BeforeEach
     void setUp() {
         databaseManager = DatabaseManager.createInMemory();
         sensorIngestionFacade = new SensorIngestionFacade(databaseManager);
-        stationAvailabilityFacade = new StationAvailabilityFacade(databaseManager);
-        maintenanceOrdersFacade = new MaintenanceOrdersFacade(databaseManager, sensorIngestionFacade, stationAvailabilityFacade);
+        maintenanceOrdersFacade = new MaintenanceOrdersFacade(databaseManager, sensorIngestionFacade);
     }
 
     @AfterEach

@@ -4,7 +4,6 @@ import pt.ulisboa.lisboapedala.maintenance_orders.MaintenanceOrderDTO;
 import pt.ulisboa.lisboapedala.maintenance_orders.persistence.MaintenanceOrderRepository;
 import pt.ulisboa.lisboapedala.sensor_ingestion.BikeAnomalyEventDTO;
 import pt.ulisboa.lisboapedala.sensor_ingestion.SensorIngestionFacade;
-import pt.ulisboa.lisboapedala.station_availability.StationAvailabilityFacade;
 
 import java.time.Instant;
 import java.util.List;
@@ -21,16 +20,13 @@ public class TicketService {
     private final MaintenanceOrderRepository repository;
     private final TechnicianAssignmentService assignmentService;
     private final SensorIngestionFacade sensorIngestionFacade;
-    private final StationAvailabilityFacade stationAvailabilityFacade;
 
     public TicketService(MaintenanceOrderRepository repository,
                          TechnicianAssignmentService assignmentService,
-                         SensorIngestionFacade sensorIngestionFacade,
-                         StationAvailabilityFacade stationAvailabilityFacade) {
+                         SensorIngestionFacade sensorIngestionFacade) {
         this.repository = repository;
         this.assignmentService = assignmentService;
         this.sensorIngestionFacade = sensorIngestionFacade;
-        this.stationAvailabilityFacade = stationAvailabilityFacade;
     }
 
     public synchronized MaintenanceOrderDTO createOrderFromAlert(String bikeId, String issueDescription) {

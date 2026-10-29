@@ -5,7 +5,6 @@ import pt.ulisboa.lisboapedala.maintenance_orders.business.TechnicianAssignmentS
 import pt.ulisboa.lisboapedala.maintenance_orders.business.TicketService;
 import pt.ulisboa.lisboapedala.maintenance_orders.persistence.MaintenanceOrderRepository;
 import pt.ulisboa.lisboapedala.sensor_ingestion.SensorIngestionFacade;
-import pt.ulisboa.lisboapedala.station_availability.StationAvailabilityFacade;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,19 +15,18 @@ import java.util.Optional;
  * Suporta o registo, priorização, atribuição e resolução de ordens de manutenção (US-2).
  *
  * Em conformidade com o ADR-005 e ARCHITECTURE.md:
- * Depende unicamente de sensor_ingestion e station_availability.
+ * Depende unicamente de sensor_ingestion.
  */
 public class MaintenanceOrdersFacade {
 
     private final TicketService ticketService;
 
     public MaintenanceOrdersFacade(DatabaseManager databaseManager,
-                                   SensorIngestionFacade sensorIngestionFacade,
-                                   StationAvailabilityFacade stationAvailabilityFacade) {
+                                   SensorIngestionFacade sensorIngestionFacade) {
         databaseManager.executeScriptFromClasspath("/pt/ulisboa/lisboapedala/maintenance_orders/persistence/schema.sql");
         MaintenanceOrderRepository repository = new MaintenanceOrderRepository(databaseManager);
         TechnicianAssignmentService assignmentService = new TechnicianAssignmentService();
-        this.ticketService = new TicketService(repository, assignmentService, sensorIngestionFacade, stationAvailabilityFacade);
+        this.ticketService = new TicketService(repository, assignmentService, sensorIngestionFacade);
     }
 
     /**

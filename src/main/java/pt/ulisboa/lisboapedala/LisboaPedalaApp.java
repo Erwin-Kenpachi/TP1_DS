@@ -70,7 +70,7 @@ public class LisboaPedalaApp {
         DockAccessFacade dockFacade = new DockAccessFacade(dbManager, tripFacade, stationFacade);
         HistoryReaderFacade historyFacade = new HistoryReaderFacade(tripFacade, billingFacade);
         SensorIngestionFacade sensorFacade = new SensorIngestionFacade(dbManager);
-        MaintenanceOrdersFacade maintenanceFacade = new MaintenanceOrdersFacade(dbManager, sensorFacade, stationFacade);
+        MaintenanceOrdersFacade maintenanceFacade = new MaintenanceOrdersFacade(dbManager, sensorFacade);
 
         this.stationController = new StationController(stationFacade);
         this.dockController = new DockController(dockFacade);

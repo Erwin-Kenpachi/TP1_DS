@@ -20,7 +20,7 @@ Durante o processo de geração iterativa do sistema através de ferramentas de 
 
 ## 2. Casos Documentados de Violação da Especificação pelo Código Gerado
 
-Conforme estipulado no enunciado, documentam-se três casos em que o código gerado por IA violou os requisitos arquiteturais e de especificação:
+Conforme estipulado no enunciado, documentam-se quatro casos em que o código gerado por IA violou os requisitos arquiteturais e de especificação:
 
 ### Caso 1: Perda de Persistência e Volatilidade de Estado no `LisboaPedalaApp`
 * **Descrição da Violação:** Na primeira implementação da interface de consola (CLI), a IA gerou os controladores e o menu principal sem assegurar a persistência duradoura do utilizador autenticado nem o registo de faturas entre diferentes execuções do programa. Ao fechar e reiniciar o programa, o histórico e as faturas associadas ao utilizador desapareciam, violando o requisito funcional da US-1 e a garantia de retenção e durabilidade.
@@ -39,6 +39,16 @@ Conforme estipulado no enunciado, documentam-se três casos em que o código ger
 * **Quem Detetou:** **Fitness Function (ArchUnit)**.
 * **Comportamento da Fitness Function:** O teste automatizado `sensor_ingestion_should_not_depend_on_other_domain_modules` falhou imediatamente na execução de `mvn test` com `AssertionError`, indicando que a classe `MalfunctionEmitter` violava a regra de proibição de dependências sobre `maintenance_orders`.
 * **Ação Corretiva:** Rejeição do código gerado e ajuste do prompt: o `sensor_ingestion` passou a guardar internamente as anomalias detetadas e a disponibilizá-las via `SensorIngestionFacade`, cabendo ao módulo `maintenance_orders` consultar a telemetria ou subscrever o evento.
+
+
+### Caso 4: Violação de *Allowed-to-Use* no Módulo `maintenance_orders`
+* **Descrição da Violação:** Durante a geração do módulo `maintenance_orders`, a IA concedeu indevidamente acesso ao módulo `station_availability`, injetando a sua fachada pública (`StationAvailabilityFacade`) no construtor da `MaintenanceOrdersFacade` e no serviço interno `TicketService`. Contudo, esta dependência nunca teve utilização funcional no código de gestão de ordens e violava a matriz normativa do `ARCHITECTURE.md` (Secção 3) e do `03-particionamento-e-vistas.md` (Secção 2.4), os quais estipulam que o módulo `maintenance_orders` pode depender única e exclusivamente de `sensor_ingestion` (para recolha e sincronização das anomalias técnicas das bicicletas).
+* **Quem Detetou:** **Revisão Humana / Análise Crítica de Conformidade Arquitetural**.
+* **Por que a Fitness Function falhou em detetar:** A *fitness function* inicial de ArchUnit (`maintenance_orders_allowed_dependencies`) foi codificada com base num rascunho anterior da especificação que admitia erradamente este acoplamento. Por essa razão, a regra excluiu deliberadamente `station_availability` da lista de pacotes proibidos e continha um comentário tolerando o acesso indevido (`// maintenance_orders só pode usar sensor_ingestion e station_availability`). Desta forma, a própria *fitness function* continha um ângulo morto por decalque de documentação desatualizada, validando falsamente como correto um acoplamento que violava o princípio do menor privilégio e as regras *Allowed-to-Use*.
+* **Ação Corretiva:** 
+  1. Remoção imediata do parâmetro e da referência a `StationAvailabilityFacade` em `MaintenanceOrdersFacade.java` e `TicketService.java`, bem como dos respetivos pontos de instanciação (`LisboaPedalaApp.java` e `MaintenanceOrdersTest.java`).
+  2. Correção da regra 7 no ArchUnit (`ModularMonolithArchitectureTest.java`), acrescentando `pt.ulisboa.lisboapedala.station_availability..` à lista de pacotes proibidos e garantindo por *fitness function* automatizada que `maintenance_orders` depende estritamente de `sensor_ingestion`.
+
 
 ---
 
