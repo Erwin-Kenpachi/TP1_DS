@@ -33,8 +33,8 @@ As regras seguintes são obrigatórias. Um módulo só pode depender dos módulo
 | Módulo de origem | Pode usar |
 |---|---|
 | `dock_access` | `trip_lifecycle`, `station_availability` |
-| `trip_lifecycle` | `tariff_billing` |
-| `station_availability` | `sensor_ingestion` |
+| `trip_lifecycle` | `tariff_billing`, `station_availability` |
+| `station_availability` | Nenhum outro módulo de domínio |
 | `maintenance_orders` | `sensor_ingestion` |
 | `fleet_redistribution` | `station_availability` |
 | `reporting_audit` | `trip_lifecycle`, `station_availability` (consultas de leitura) |

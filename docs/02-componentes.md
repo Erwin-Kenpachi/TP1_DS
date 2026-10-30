@@ -38,7 +38,7 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
 | :--- | :--- | :---: | :---: | :---: |
 | `dock_access` | Gerir/Organizar e validar os comandos de desbloqueio e encaixe, comunicando com as docas. | 1 | 1 | 0.5 |
 | `trip_lifecycle` | Controlar o estado e a duração das viagens, fechando-as quando a doca confirma a devolução. | 3 | 1 | 0.25 |
-| `tariff_billing` | Calcular tarifas, processar cobranças e gerir a emissão e comunicação de faturas. | 1 | 1 | 0.5 |
+| `tariff_billing` | Calcular tarifas, processar cobranças e gerir a emissão e comunicação de faturas. | 2 | 0 | 0.0 |
 | `station_availability` | Manter a visão atualizada da ocupação e da disponibilidade de bicicletas e docas por estação. | 2 | 1 | 0.33 |
 | `sensor_ingestion` | Receber e processar a telemetria das bicicletas elétricas. | 2 | 0 | 0 |
 | `maintenance_orders` | Criar, acompanhar e concluir ordens de manutenção preventiva e corretiva. | 0 | 1 | 1.0 |
@@ -68,12 +68,11 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
    Em relação ao acompolamento a arquitetura apresenta um equilíbrio saudável e intencional entre componentes estáveis e componentes voláteis.
    ### Componentes Estáveis
 
-   Os componentes mais estáveis da arquitetura são: `trip_lifecycle` ($I = 0.25$), `station_availability` ($I = 0.33$) e `sensor_ingestion` ($I = 0.0$). Trata-se de componentes centrais que agregam informações e ações-chave da aplicação. Por exemplo, o `trip_lifecycle` gere o ciclo de vida da viagem e alimenta diretamente o histórico do utilizador,os relatórios municipais e o cálculo dos pagamentos, o que justifica a sua alta estabilidade ($Ca$ elevado) para evitar efeitos de propagação de erro para os componentes que dele dependem.
+   Os componentes mais estáveis da arquitetura são: `tariff_billing` ($I = 0.0$), `sensor_ingestion` ($I = 0.0$), `trip_lifecycle` ($I = 0.25$) e `station_availability` ($I = 0.33$). Trata-se de componentes centrais que agregam informações e regras de negócio essenciais da aplicação. Por exemplo, o `trip_lifecycle` gere o ciclo de vida da viagem e alimenta diretamente o histórico do utilizador e os relatórios municipais, acionando o `tariff_billing` no momento do encerramento da viagem. Por sua vez, o `tariff_billing` atua como um módulo folha com estabilidade máxima ($I = 0.0$), sendo invocado por `trip_lifecycle` para emissão e liquidação de faturas, e por `history_reader` para consulta do histórico financeiro.
 
    ### Componentes equilibrados
 
-   Os componentes que apresentam um nível de instabilidade intermédio ($I = 0.5$) — nomeadamente o dock_access e o tariff_billing — desempenham um papel crucial de mediação e transição na arquitetura do sistema.Estes módulos caracterizam-se por um equilíbrio simétrico entre o acoplamento aferente e eferente ($Ca = 1$ e $Ce = 1$), o que significa que dependem estritamente de um componente externo para executar a sua lógica, mas são, por sua vez, diretamente referenciados por outro elemento central da aplicação.
-   Por exemplo, o dock_access atua como ponto de articulação entre a camada física das docas e o núcleo transacional (trip_lifecycle), processando comandos de encaixe e desencaixe de forma equilibrada
+   O componente que apresenta um nível de instabilidade intermédio ($I = 0.5$) — nomeadamente o `dock_access` — desempenha um papel crucial de mediação e transição na arquitetura do sistema. Este módulo caracteriza-se por um equilíbrio simétrico entre o acoplamento aferente e eferente ($Ca = 1$ e $Ce = 1$), atuando como ponto de articulação entre a camada física das docas e o núcleo transacional (`trip_lifecycle`), processando comandos de encaixe e desencaixe de forma equilibrada.
 
    ### Componentes Voláteis / Periféricos
 

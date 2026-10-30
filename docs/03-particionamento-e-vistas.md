@@ -162,8 +162,8 @@ As dependências entre os módulos de domínio obedecem às seguintes regras res
 | :--- | :--- | :--- |
 | `dock_access` | `trip_lifecycle`, `station_availability` | `tariff_billing`, `sensor_ingestion` |
 | `trip_lifecycle` | `tariff_billing`, `station_availability` | `dock_access`, `sensor_ingestion` |
-| `tariff_billing` | *(Nenhum módulo)* | Todos os outros |
-| `station_availability` | `sensor_ingestion` | Todos os outros |
+| `tariff_billing` | *(Nenhum — módulo folha)* | Todos os outros |
+| `station_availability` | *(Nenhum)* | Todos os outros |
 | `sensor_ingestion` | *(Nenhum)* | `trip_lifecycle`, `tariff_billing` |
 | `fleet_redistribution` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
 | `maintenance_orders` | `sensor_ingestion` | Módulos de negócio crítico |
@@ -351,7 +351,7 @@ Em conformidade com a notação C&C (Bass, Clements & Kazman), cada canal de com
 | :--- | :--- | :--- | :---: | :--- |
 | **C1: Cliente $\rightarrow$ `dock_access`** | Chamada Remota | HTTPS / REST (JSON) | Síncrono | Autenticação por token/QR code; timeout e resposta com confirmação imediata. |
 | **C2: Doca Física $\leftrightarrow$ `dock_access`** | Mensagens IoT / RPC | Rede Móvel (MQTT / TCP) | Assíncrono com tolerância a falhas | **Tolerância a desconexão:** se a rede falhar, a doca armazena o evento em memória local (até 24h). Na reconexão, o reenvio é processado com idempotência no backend. |
-| **C3: Inter-Módulos (`dock_access` $\rightarrow$ `trip_lifecycle` $\rightarrow$ `tariff_billing`)** | Chamada de Procedimento | *In-Process Method Call* (Java/Python) | Síncrono | Chamadas locais em memória via API pública (fachada), de alta velocidade e sem overhead de rede. |
+| **C3: Inter-Módulos (`dock_access` $\rightarrow$ `trip_lifecycle` $\rightarrow$ `tariff_billing` / `station_availability`)** | Chamada de Procedimento | *In-Process Method Call* (Java/Python) | Síncrono | Chamadas locais em memória via API pública (fachada), de alta velocidade e sem overhead de rede. |
 | **C4: Módulos $\rightarrow$ Base de Dados** | Acesso a Dados | Driver SQL / JDBC | Síncrono transacional | Transações atómicas para assegurar que viagens e faturas mantêm integridade referencial sem duplicações. |
 | **C5: `tariff_billing` $\rightarrow$ Gateways Externos** | Chamada Remota Web | HTTPS / REST | Síncrono com retries | Circuit breaker e timeouts dedicados; gravação do estado `PENDENTE` em caso de falha de comunicação externa. |
 
