@@ -163,7 +163,7 @@ As dependências entre os módulos de domínio obedecem às seguintes regras res
 | `dock_access` | `trip_lifecycle`, `station_availability` | `tariff_billing`, `sensor_ingestion` |
 | `trip_lifecycle` | `tariff_billing`, `station_availability` | `dock_access`, `sensor_ingestion` |
 | `tariff_billing` | *(Nenhum — módulo folha)* | Todos os outros |
-| `station_availability` | *(Nenhum)* | Todos os outros |
+| `station_availability` |`sensor_ingestion` | Todos os outros |
 | `sensor_ingestion` | *(Nenhum)* | `trip_lifecycle`, `tariff_billing` |
 | `fleet_redistribution` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
 | `maintenance_orders` | `sensor_ingestion` | Módulos de negócio crítico |
