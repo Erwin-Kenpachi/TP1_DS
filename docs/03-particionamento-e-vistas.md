@@ -162,9 +162,9 @@ As dependências entre os módulos de domínio obedecem às seguintes regras res
 | :--- | :--- | :--- |
 | `dock_access` | `trip_lifecycle`, `station_availability` | `tariff_billing`, `sensor_ingestion` |
 | `trip_lifecycle` | `tariff_billing`, `station_availability` | `dock_access`, `sensor_ingestion` |
-| `tariff_billing` | *(Nenhum - módulo folha/orquestrado)* | Todos os outros |
-| `station_availability` | *(Nenhum)* | Todos os outros |
-| `sensor_ingestion` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
+| `tariff_billing` | *(Nenhum módulo)* | Todos os outros |
+| `station_availability` | `sensor_ingestion` | Todos os outros |
+| `sensor_ingestion` | *(Nenhum)* | `trip_lifecycle`, `tariff_billing` |
 | `fleet_redistribution` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
 | `maintenance_orders` | `sensor_ingestion` | Módulos de negócio crítico |
 | `history_reader` |  `tariff_billing`,`trip_lifecycle`| Todos os outros
@@ -395,17 +395,17 @@ Para facilitar a manutenção do sistema, cada módulo deve ter um responsável 
 
 | Módulo ou componente | Responsável principal | Responsabilidades |
 |---|---|---|
-| `dock_access` | A definir | Desbloqueio e devolução de bicicletas e comunicação com as docas |
-| `trip_lifecycle` | A definir | Registo, acompanhamento e conclusão das viagens |
-| `tariff_billing` | A definir | Cálculo de tarifas, pagamentos e faturação |
-| `station_availability` | A definir | Disponibilidade de bicicletas e docas nas estações |
-| `sensor_ingestion` | A definir | Receção e processamento da telemetria |
-| `fleet_redistribution` | A definir | Propostas de redistribuição da frota e gestão de rotas |
-| `maintenance_orders` | A definir | Registo e acompanhamento das ordens de manutenção |
-| `reporting_audit` | A definir | Relatórios operacionais, agregação de dados e auditoria |
-| `history_reader` | A definir | Relatórios do user |
+| `dock_access` | @Tiago | Desbloqueio e devolução de bicicletas e comunicação com as docas |
+| `trip_lifecycle` | @Tiago| Registo, acompanhamento e conclusão das viagens |
+| `tariff_billing` | @Tiago | Cálculo de tarifas, pagamentos e faturação |
+| `station_availability` | @Tiago | Disponibilidade de bicicletas e docas nas estações |
+| `sensor_ingestion` | @Diogo| Receção e processamento da telemetria |
+| `fleet_redistribution` | @Tiago | Propostas de redistribuição da frota e gestão de rotas |
+| `maintenance_orders` | @Diogo | Registo e acompanhamento das ordens de manutenção |
+| `reporting_audit` | @Diogo | Relatórios operacionais, agregação de dados e auditoria |
+| `history_reader` | @Diogo | Relatórios do user |
 
-| Infraestrutura e integração | A definir | Configuração do ambiente de execução, integração e persistência |
+
 
 
 ### 5.3. Gestão da responsabilidade pelo código com `CODEOWNERS`
@@ -419,8 +419,9 @@ Para facilitar a manutenção do sistema, cada módulo deve ter um responsável 
 /station_availability/    @Tiago
 /sensor_ingestion/        @Diogo
 /fleet_redistribution/    @Tiago
-/maintenance_orders/      @Tiago
+/maintenance_orders/      @Diogo
 /reporting_audit/         @Diogo
+/history_reader/          @Diogo 
 
 # Testes e regras arquiteturais
 /tests/architecture/      @Tiago e Diogo
