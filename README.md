@@ -145,19 +145,42 @@ O projeto inclui o wrapper Maven (`mvnw.cmd` para Windows ou `./mvnw` para Unix)
 
 > **Verificação:** A execução cobre 38 testes com 0 falhas, incluindo as 10 regras arquiteturais de [`ModularMonolithArchitectureTest`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/tests/architecture/ModularMonolithArchitectureTest.java), validação de ausência de ciclos e testes de idempotência offline (`US1IdempotencyAndOfflineSyncTest`).
 
-### Executar a Aplicação Interativa (CLI)
-Para iniciar a aplicação em modo de consola (com persistência ativa no ficheiro SQLite local `lisboapedala.db`):
+### Executar a Aplicação Interativa: `LisboaPedalaApp`
+
+A aplicação em consola (CLI) centraliza todas as funcionalidades do sistema num ambiente interativo, intuitivo e com persistência contínua no ficheiro SQLite local `lisboapedala.db`.
+
+O ponto de entrada principal do projeto é a classe [`LisboaPedalaApp.java`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/src/main/java/pt/ulisboa/lisboapedala/LisboaPedalaApp.java).
+
+#### Método 1: No VS Code ou IDE (Mais Simples — "Run Java")
+> **Basta abrir o ficheiro [`LisboaPedalaApp.java`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/src/main/java/pt/ulisboa/lisboapedala/LisboaPedalaApp.java) e carregar no botão "Run Java" (ou "Run") no canto superior direito do editor.**
+> 
+> A aplicação inicia imediatamente no terminal integrado, pronta a ser utilizada.
+
+#### Método 2: Via Terminal (Linha de Comandos)
+Em alternativa, pode ser iniciada através do wrapper Maven:
 
 ```bash
-# Windows
+# Windows (PowerShell / CMD)
 .\mvnw.cmd compile exec:java
 
 # Linux / macOS
 ./mvnw compile exec:java
 ```
 
-A aplicação disponibiliza:
-1. **Ecrã de Boas-Vindas:** Login ou Registo de novo utilizador (com hashing de credenciais).
-2. **Menu Principal do Ciclista:** Desbloquear bicicleta, Devolver bicicleta, Consultar mapa de estações e Consultar histórico de viagens e recibos fiscais.
-3. **Menu de Gestão e Operações:** Consulta de telemetria, ordens de manutenção e geração de relatórios municipais por freguesia com estimativa de CO₂ evitado.
+---
+
+### Funcionalidades Disponíveis na `LisboaPedalaApp`
+Ao executar o programa, a consola disponibiliza um menu completo de demonstração:
+1. **Autenticação Segura (Ecrã Inicial):**
+   - Registo de novo utilizador (perfil assinante com passe ou utilizador ocasional, com hashing de credenciais).
+   - Login para restaurar o perfil ativo a partir da base de dados SQLite.
+2. **Menu Principal do Ciclista (US-1 e US-8):**
+   - **Desbloquear Bicicleta:** Seleção de estação e bicicleta, validação transacional e início da viagem.
+   - **Devolver Bicicleta:** Encaixe físico na doca de destino, cálculo exato da duração e faturação imediata.
+   - **Consultar Mapa de Estações:** Ocupação em tempo real de bicicletas disponíveis e docas livres (`station_availability`).
+   - **Histórico e Recibos Fiscais:** Consulta unificada das viagens realizadas e recibos fiscais com link da AT (`history_reader`).
+3. **Menu de Gestão e Operações Técnicas (US-2 e US-4):**
+   - **Telemetria de Sensores:** Envio de pings IoT e reporte de anomalias técnicas (`sensor_ingestion`).
+   - **Ordens de Manutenção:** Acompanhamento e resolução de tickets pela equipa de técnicos (`maintenance_orders`).
+   - **Relatórios Municipais:** Emissão de relatórios de utilização por freguesia de Lisboa, estimativa de CO₂ poupado face ao automóvel e publicação de métricas para o portal de dados abertos (`reporting_audit`).
 
