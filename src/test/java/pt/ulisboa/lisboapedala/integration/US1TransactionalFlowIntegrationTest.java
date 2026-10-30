@@ -39,7 +39,7 @@ class US1TransactionalFlowIntegrationTest {
         databaseManager = DatabaseManager.createInMemory();
         stationAvailabilityFacade = new StationAvailabilityFacade(databaseManager);
         tariffBillingFacade = new TariffBillingFacade(databaseManager);
-        tripLifecycleFacade = new TripLifecycleFacade(databaseManager, tariffBillingFacade, stationAvailabilityFacade);
+        tripLifecycleFacade = new TripLifecycleFacade(databaseManager, tariffBillingFacade);
         dockAccessFacade = new DockAccessFacade(databaseManager, tripLifecycleFacade, stationAvailabilityFacade);
 
         // Configuração inicial das estações

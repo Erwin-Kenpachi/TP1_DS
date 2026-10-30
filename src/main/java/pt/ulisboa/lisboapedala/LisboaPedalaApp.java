@@ -66,7 +66,7 @@ public class LisboaPedalaApp {
 
         StationAvailabilityFacade stationFacade = new StationAvailabilityFacade(dbManager);
         TariffBillingFacade billingFacade = new TariffBillingFacade(dbManager);
-        TripLifecycleFacade tripFacade = new TripLifecycleFacade(dbManager, billingFacade, stationFacade);
+        TripLifecycleFacade tripFacade = new TripLifecycleFacade(dbManager, billingFacade);
         DockAccessFacade dockFacade = new DockAccessFacade(dbManager, tripFacade, stationFacade);
         HistoryReaderFacade historyFacade = new HistoryReaderFacade(tripFacade, billingFacade);
         SensorIngestionFacade sensorFacade = new SensorIngestionFacade(dbManager);

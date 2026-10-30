@@ -39,7 +39,7 @@ class US1IdempotencyAndOfflineSyncTest {
         databaseManager = DatabaseManager.createInMemory();
         stationAvailabilityFacade = new StationAvailabilityFacade(databaseManager);
         tariffBillingFacade = new TariffBillingFacade(databaseManager);
-        tripLifecycleFacade = new TripLifecycleFacade(databaseManager, tariffBillingFacade, stationAvailabilityFacade);
+        tripLifecycleFacade = new TripLifecycleFacade(databaseManager, tariffBillingFacade);
         dockAccessFacade = new DockAccessFacade(databaseManager, tripLifecycleFacade, stationAvailabilityFacade);
 
         stationAvailabilityFacade.registerStation(new StationOccupancyDTO("ST-ROSSIO", "Rossio", "Santa Maria Maior", 10, 5, 5));

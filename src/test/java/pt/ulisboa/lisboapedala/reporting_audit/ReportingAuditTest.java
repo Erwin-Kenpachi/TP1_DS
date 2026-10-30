@@ -31,7 +31,7 @@ class ReportingAuditTest {
         databaseManager = DatabaseManager.createInMemory();
         stationAvailabilityFacade = new StationAvailabilityFacade(databaseManager);
         TariffBillingFacade tariffBillingFacade = new TariffBillingFacade(databaseManager);
-        tripLifecycleFacade = new TripLifecycleFacade(databaseManager, tariffBillingFacade, stationAvailabilityFacade);
+        tripLifecycleFacade = new TripLifecycleFacade(databaseManager, tariffBillingFacade);
         reportingAuditFacade = new ReportingAuditFacade(databaseManager, tripLifecycleFacade, stationAvailabilityFacade);
         reportController = new ReportController(reportingAuditFacade);
 

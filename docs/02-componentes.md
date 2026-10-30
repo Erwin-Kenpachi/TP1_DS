@@ -37,7 +37,7 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
 | Componente Lógico | Responsabilidade Única (Coesão) | Ca (Entradas) | Ce (Saídas) | Instabilidade ($I$) |
 | :--- | :--- | :---: | :---: | :---: |
 | `dock_access` | Gerir/Organizar e validar os comandos de desbloqueio e encaixe, comunicando com as docas. | 1 | 1 | 0.5 |
-| `trip_lifecycle` | Controlar o estado e a duração das viagens, fechando-as quando a doca confirma a devolução. | 3 | 1 | 0.25 |
+| `trip_lifecycle` | Controlar o estado e a duração das viagens, fechando-as quando a doca confirma a devolução. | 2 | 2 | 0.5 |
 | `tariff_billing` | Calcular tarifas, processar cobranças e gerir a emissão e comunicação de faturas. | 2 | 0 | 0.0 |
 | `station_availability` | Manter a visão atualizada da ocupação e da disponibilidade de bicicletas e docas por estação. | 2 | 1 | 0.33 |
 | `sensor_ingestion` | Receber e processar a telemetria das bicicletas elétricas. | 2 | 0 | 0 |
@@ -68,7 +68,7 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
    Em relação ao acompolamento a arquitetura apresenta um equilíbrio saudável e intencional entre componentes estáveis e componentes voláteis.
    ### Componentes Estáveis
 
-   Os componentes mais estáveis da arquitetura são: `tariff_billing` ($I = 0.0$), `sensor_ingestion` ($I = 0.0$), `trip_lifecycle` ($I = 0.25$) e `station_availability` ($I = 0.33$). Trata-se de componentes centrais que agregam informações e regras de negócio essenciais da aplicação. Por exemplo, o `trip_lifecycle` gere o ciclo de vida da viagem e alimenta diretamente o histórico do utilizador e os relatórios municipais, acionando o `tariff_billing` no momento do encerramento da viagem. Por sua vez, o `tariff_billing` atua como um módulo folha com estabilidade máxima ($I = 0.0$), sendo invocado por `trip_lifecycle` para emissão e liquidação de faturas, e por `history_reader` para consulta do histórico financeiro.
+   Os componentes mais estáveis da arquitetura são: `tariff_billing` ($I = 0.0$), `sensor_ingestion` ($I = 0.0$), `trip_lifecycle` ($I = 0.5$) e `station_availability` ($I = 0.33$). Trata-se de componentes centrais que agregam informações e regras de negócio essenciais da aplicação. Por exemplo, o `trip_lifecycle` gere o ciclo de vida da viagem e alimenta diretamente o histórico do utilizador e os relatórios municipais, acionando o `tariff_billing` no momento do encerramento da viagem. Por sua vez, o `tariff_billing` atua como um módulo folha com estabilidade máxima ($I = 0.0$), sendo invocado por `trip_lifecycle` para emissão e liquidação de faturas, e por `history_reader` para consulta do histórico financeiro.
 
    ### Componentes equilibrados
 

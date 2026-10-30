@@ -105,19 +105,20 @@ public class ModularMonolithArchitectureTest {
                     )
                     .because("dock_access só pode usar trip_lifecycle e station_availability");
 
-    // 6. Allowed-to-Use: trip_lifecycle só pode usar tariff_billing e station_availability
+    // 6. Allowed-to-Use: trip_lifecycle só pode usar tariff_billing
     @ArchTest
     public static final ArchRule trip_lifecycle_allowed_dependencies =
             noClasses().that().resideInAPackage("pt.ulisboa.lisboapedala.trip_lifecycle..")
                     .should().dependOnClassesThat().resideInAnyPackage(
                             "pt.ulisboa.lisboapedala.dock_access..",
+                            "pt.ulisboa.lisboapedala.station_availability..",
                             "pt.ulisboa.lisboapedala.sensor_ingestion..",
                             "pt.ulisboa.lisboapedala.maintenance_orders..",
                             "pt.ulisboa.lisboapedala.reporting_audit..",
                             "pt.ulisboa.lisboapedala.fleet_redistribution..",
                             "pt.ulisboa.lisboapedala.history_reader.."
                     )
-                    .because("trip_lifecycle só pode usar tariff_billing e station_availability");
+                    .because("trip_lifecycle só pode usar tariff_billing (ARCHITECTURE.md seção 3)");
 
     // 7. Allowed-to-Use: maintenance_orders só pode usar sensor_ingestion
     @ArchTest

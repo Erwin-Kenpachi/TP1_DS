@@ -1,7 +1,6 @@
 package pt.ulisboa.lisboapedala.trip_lifecycle;
 
 import pt.ulisboa.lisboapedala.common.DatabaseManager;
-import pt.ulisboa.lisboapedala.station_availability.StationAvailabilityFacade;
 import pt.ulisboa.lisboapedala.tariff_billing.TariffBillingFacade;
 import pt.ulisboa.lisboapedala.trip_lifecycle.business.TripService;
 import pt.ulisboa.lisboapedala.trip_lifecycle.persistence.TripRepository;
@@ -13,17 +12,18 @@ import java.util.Optional;
 /**
  * Fachada pública do módulo trip_lifecycle.
  * Único ponto de contacto público permitido para outros módulos.
+ * Em conformidade com ARCHITECTURE.md (Secção 3):
+ * Depende exclusivamente de tariff_billing.
  */
 public class TripLifecycleFacade {
 
     private final TripService service;
 
     public TripLifecycleFacade(DatabaseManager databaseManager,
-                               TariffBillingFacade tariffBillingFacade,
-                               StationAvailabilityFacade stationAvailabilityFacade) {
+                               TariffBillingFacade tariffBillingFacade) {
         databaseManager.executeScriptFromClasspath("/pt/ulisboa/lisboapedala/trip_lifecycle/persistence/schema.sql");
         TripRepository repository = new TripRepository(databaseManager);
-        this.service = new TripService(repository, tariffBillingFacade, stationAvailabilityFacade);
+        this.service = new TripService(repository, tariffBillingFacade);
     }
 
     public TripDTO startTrip(StartTripRequestDTO request) {

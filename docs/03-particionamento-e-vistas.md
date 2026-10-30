@@ -161,7 +161,7 @@ As dependências entre os módulos de domínio obedecem às seguintes regras res
 | Módulo Origem | Módulos Permitidos (*Allowed-to-Use*) | Módulos Proibidos |
 | :--- | :--- | :--- |
 | `dock_access` | `trip_lifecycle`, `station_availability` | `tariff_billing`, `sensor_ingestion` |
-| `trip_lifecycle` | `tariff_billing`, `station_availability` | `dock_access`, `sensor_ingestion` |
+| `trip_lifecycle` | `tariff_billing` | `dock_access`, `station_availability`, `sensor_ingestion` |
 | `tariff_billing` | *(Nenhum — módulo folha)* | Todos os outros |
 | `station_availability` |`sensor_ingestion` | Todos os outros |
 | `sensor_ingestion` | *(Nenhum)* | `trip_lifecycle`, `tariff_billing` |

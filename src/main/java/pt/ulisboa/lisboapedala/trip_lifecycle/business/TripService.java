@@ -1,6 +1,5 @@
 package pt.ulisboa.lisboapedala.trip_lifecycle.business;
 
-import pt.ulisboa.lisboapedala.station_availability.StationAvailabilityFacade;
 import pt.ulisboa.lisboapedala.tariff_billing.BillingRequestDTO;
 import pt.ulisboa.lisboapedala.tariff_billing.TariffBillingFacade;
 import pt.ulisboa.lisboapedala.trip_lifecycle.CompleteTripRequestDTO;
@@ -17,14 +16,11 @@ public class TripService {
 
     private final TripRepository tripRepository;
     private final TariffBillingFacade tariffBillingFacade;
-    private final StationAvailabilityFacade stationAvailabilityFacade;
 
     public TripService(TripRepository tripRepository,
-                       TariffBillingFacade tariffBillingFacade,
-                       StationAvailabilityFacade stationAvailabilityFacade) {
+                       TariffBillingFacade tariffBillingFacade) {
         this.tripRepository = tripRepository;
         this.tariffBillingFacade = tariffBillingFacade;
-        this.stationAvailabilityFacade = stationAvailabilityFacade;
     }
 
     public synchronized TripDTO startTrip(StartTripRequestDTO request) {
@@ -48,9 +44,6 @@ public class TripService {
         );
 
         tripRepository.save(newTrip);
-
-        // Atualiza contadores na estação de levantamento (menos 1 bicicleta, mais 1 doca livre)
-        stationAvailabilityFacade.updateAvailability(request.startStationId(), -1, 1);
 
         return newTrip;
     }
@@ -94,10 +87,7 @@ public class TripService {
 
         tripRepository.save(completedTrip);
 
-        // 4. Atualiza estação de devolução (mais 1 bicicleta, menos 1 doca livre)
-        stationAvailabilityFacade.updateAvailability(request.endStationId(), 1, -1);
-
-        // 5. Aciona faturação de forma síncrona e idempotente
+        // 4. Aciona faturação de forma síncrona e idempotente
         tariffBillingFacade.processTripBilling(new BillingRequestDTO(
                 completedTrip.tripId(),
                 completedTrip.userId(),

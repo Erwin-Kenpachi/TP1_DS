@@ -56,7 +56,10 @@ public class DockAccessService {
                 true
         ));
 
-        // 3. Simula o envio de comando elétrico para o trinco físico da doca
+        // 3. Atualiza contadores físicos na estação de levantamento (menos 1 bicicleta, mais 1 doca livre)
+        stationAvailabilityFacade.updateAvailability(request.stationId(), -1, 1);
+
+        // 4. Simula o envio de comando elétrico para o trinco físico da doca
         return new UnlockBikeResponseDTO(true, tripId, "Doca " + request.dockId() + " destrancada com sucesso.");
     }
 
@@ -96,6 +99,9 @@ public class DockAccessService {
         ));
 
         repository.markSynced(request.eventId());
+
+        // 4. Atualiza contadores físicos na estação de devolução (mais 1 bicicleta, menos 1 doca livre)
+        stationAvailabilityFacade.updateAvailability(request.stationId(), 1, -1);
 
         return new ReturnBikeResponseDTO(true, completedTrip.tripId(), "Bicicleta trancada e viagem concluída com sucesso.");
     }

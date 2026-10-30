@@ -37,7 +37,7 @@ class HistoryReaderTest {
         stationFacade.registerStation(new StationOccupancyDTO("ST-02", "Saldanha", "Avenidas Novas", 10, 5, 5));
 
         tariffBillingFacade = new TariffBillingFacade(databaseManager);
-        tripLifecycleFacade = new TripLifecycleFacade(databaseManager, tariffBillingFacade, stationFacade);
+        tripLifecycleFacade = new TripLifecycleFacade(databaseManager, tariffBillingFacade);
         dockAccessFacade = new DockAccessFacade(databaseManager, tripLifecycleFacade, stationFacade);
         historyReaderFacade = new HistoryReaderFacade(tripLifecycleFacade, tariffBillingFacade);
     }
