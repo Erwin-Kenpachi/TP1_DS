@@ -36,8 +36,8 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
 
 | Componente Lógico | Responsabilidade Única (Coesão) | Ca (Entradas) | Ce (Saídas) | Instabilidade ($I$) |
 | :--- | :--- | :---: | :---: | :---: |
-| `dock_access` | Gerir/Organizar e validar os comandos de desbloqueio e encaixe, comunicando com as docas. | 1 | 1 | 0.5 |
-| `trip_lifecycle` | Controlar o estado e a duração das viagens, fechando-as quando a doca confirma a devolução. | 2 | 2 | 0.5 |
+| `dock_access` | Gerir/Organizar e validar os comandos de desbloqueio e encaixe, comunicando com as docas. | 0 | 2 | 1 |
+| `trip_lifecycle` | Controlar o estado e a duração das viagens, fechando-as quando a doca confirma a devolução. | 3 | 1 | 0.25 |
 | `tariff_billing` | Calcular tarifas, processar cobranças e gerir a emissão e comunicação de faturas. | 2 | 0 | 0.0 |
 | `station_availability` | Manter a visão atualizada da ocupação e da disponibilidade de bicicletas e docas por estação. | 2 | 1 | 0.33 |
 | `sensor_ingestion` | Receber e processar a telemetria das bicicletas elétricas. | 2 | 0 | 0 |
@@ -68,20 +68,25 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
    Em relação ao acompolamento a arquitetura apresenta um equilíbrio saudável e intencional entre componentes estáveis e componentes voláteis.
    ### Componentes Estáveis
 
-   Os componentes mais estáveis da arquitetura são `tariff_billing` ($I = 0.0$), `sensor_ingestion` ($I = 0.0$) e station_availability ($I = 0.33$). Trata-se de módulos folha e de infraestrutura que concentram regras essenciais e fornecem dados sem dependerem substancialmente de outros domínios de negócio. O tariff_billing apresenta estabilidade máxima ($I = 0.0$), sendo invocado síncronamente por trip_lifecycle para emissão e liquidação de faturas, e por history_reader para consulta do histórico financeiro. O sensor_ingestion ($I = 0.0$) foca-se exclusivamente na receção de telemetria IoT sem depender de outros módulos do monólit
+   Os componentes mais estáveis da arquitetura são: `tariff_billing` ($I = 0.0$), `sensor_ingestion` ($I = 0.0$), `trip_lifecycle` ($I = 0.25$) e `station_availability` ($I = 0.33$). Trata-se de componentes centrais que agregam informações e regras de negócio essenciais da aplicação. Por exemplo, o `trip_lifecycle` gere o ciclo de vida da viagem e alimenta diretamente o histórico do utilizador e os relatórios municipais, acionando o `tariff_billing` no momento do encerramento da viagem. Por sua vez, o `tariff_billing` atua como um módulo folha com estabilidade máxima ($I = 0.0$), sendo invocado por `trip_lifecycle` para emissão e liquidação de faturas, e por `history_reader` para consulta do histórico financeiro.
 
    ### Componentes equilibrados
 
-   Os componentes que apresentam um nível de instabilidade intermédio ($I = 0.5$) — nomeadamente `dock_access` ($Ca = 1, Ce = 1$) e `trip_lifecycle` ($Ca = 2, Ce = 2$) — desempenham o papel central de mediação, orquestração e transição na arquitetura do sistema.O dock_access atua como ponto de articulação entre a camada física das docas e o núcleo transacional, validando pedidos e comunicando com trip_lifecycle e station_availability.O trip_lifecycle orquestra o ciclo de vida das viagens, sendo invocado por dock_access e consumido por reporting_audit e history_reader, enquanto aciona diretamente tariff_billing no momento de fecho da viagem.Ambos mantêm uma simetria entre dependências de entrada e saída, garantindo uma coesão forte na execução dos fluxos do monólito.
+   Na métrica de instabilidade de Robert C. Martin ($I = \frac{Ce}{Ca + Ce}$), a decomposição consolidada do *Lisboa Pedala* estabelece uma transição nítida entre o núcleo transacional altamente estável e a periferia. Os componentes que assumem o papel funcional de equilíbrio e articulação no sistema são o `trip_lifecycle` ($Ca = 3, Ce = 1, I = 0.25$) e o `station_availability` ($Ca = 2, Ce = 1, I = 0.33$). Estes módulos centrais suportam forte acoplamento aferente (sendo demandados pelas entradas do sistema e pelos módulos de leitura), mantendo simultaneamente um acoplamento eferente mínimo e estritamente controlado ($Ce = 1$), garantindo a integridade dos dados e o isolamento das regras de negócio sem gerar acoplamento em cascata.
 
    ### Componentes Voláteis / Periféricos
 
-   Em contrapartida, os componentes nas extremidades da arquitetura — como `maintenance_orders`, `fleet_redistribution`, `reporting_audit` e `history_reader` — apresentam uma instabilidade máxima ($I = 1.0$). Como não possuem dependências de entrada diretas ($Ca = 0$), funcionam como módulos periféricos flexíveis que podem ser alterados ou refatorizados sem colocar em risco o núcleo transacional do sistema.
+   Os componentes situados nas extremidades da arquitetura — nomeadamente `dock_access` ($I = 1.0$), `maintenance_orders` ($I = 1.0$), `fleet_redistribution` ($I = 1.0$), `reporting_audit` ($I = 1.0$) e `history_reader` ($I = 1.0$) — apresentam instabilidade máxima formal ($I = 1.0$), uma vez que nenhum outro módulo interno de domínio depende deles ($Ca = 0$). Funcionam como módulos periféricos altamente flexíveis, que podem ser evoluídos ou refatorizados sem risco de propagação de efeitos colaterais para o núcleo da aplicação:
+   - **`dock_access` ($Ca = 0, Ce = 2$):** Atua como fachada de entrada e orquestrador físico dos comandos das docas, delegando o ciclo de vida da viagem no `trip_lifecycle` e a atualização de lotação no `station_availability`.
+   - **`history_reader` ($Ca = 0, Ce = 2$):** Centraliza as consultas do utilizador final em modo de leitura, compondo dados do `trip_lifecycle` e do `tariff_billing`.
+   - **`maintenance_orders` ($Ca = 0, Ce = 1$):** Reage às anomalias detetadas pela ingestão de telemetria, gerindo ordens de reparação técnicas.
+   - **`fleet_redistribution` ($Ca = 0, Ce = 1$):** Consome a disponibilidade de estações do `station_availability` para calcular desequilíbrios de frota e sugerir rotas operacionais.
+   - **`reporting_audit` ($Ca = 0, Ce = 1$):** Consome os registos de viagens concluídas do `trip_lifecycle` para calcular a poupança ambiental e gerar relatórios agregados municipais.
 
 # Conascência - nivel de dependencias 
 
-1. **`sensor_ingestion` e `station_availability`:** 
-   A bicicleta elétrica envia pacotes de coordenadas GPS a cada 30 segundos. Se o `sensor_ingestion` enviar a localização num formato de tuplo (latitude, longitude) em graus, o `station_availability` tem de assumir exatamente a mesma convenção para calcular se a bicicleta está dentro do raio de uma estação. Se um mudar a ordem para (longitude, latitude), o mapa fica completamente desconfigurado. 
+1. **`trip_lifecycle` e `tariff_billing`:** 
+  O `trip_lifecycle` calcula a duração total da viagem e passa esse valor ao `tariff_billing`. Ambos têm de partilhar exatamente a mesma convenção quanto à unidade de medida (minutos inteiros decorridos) e ao algoritmo de arredondamento de blocos de 15 minutos. Se o `trip_lifecycle` passar o tempo em segundos ou milissegundos e o `tariff_billing` interpretar como minutos, a cobrança será incorretamente inflacionada por um fator de 60, quebrando a integridade financeira do sistema.
 
 2. **`dock_access` e `trip_lifecycle`:** 
    A doca física envia um evento quando a bicicleta é bloqueada. Ambos têm de partilhar a convenção do que significa "sucesso", por exemplo, o código de estado lock_status: 1 ou a string "LOCKED". 
@@ -90,7 +95,7 @@ Esta tabela organiza as ações identificadas para cada perfil de utilizador/sis
 # Exemplos de Acoplamento Temporal
 
 1. **`dock_access` e `trip_lifecycle`:** 
-   O componente `trip_lifecycle` depende temporalmente e de forma síncrona do momento exato em que a bicicleta é desbloqueada ou encaixada na doca. No instante do início da viagem e no instante do fecho da viagem, o `dock_access` envia uma chamada síncrona para o `trip_lifecycle` para confirmar o estado físico do encaixe, servindo para respetivamente começar a contagem e terminar a contagem do tempo da viagem.
+  O componente `dock_access` depende temporalmente e de forma síncrona do `trip_lifecycle` no momento exato em que a bicicleta é desbloqueada ou encaixada na doca. No instante do início e no instante do fecho da viagem, o `dock_access` envia uma chamada síncrona para o `trip_lifecycle` para criar ou encerrar o registo transacional, servindo para respetivamente começar a contagem e terminar a contagem do tempo da viagem.
 
 2. **`fleet_redistribution` e `station_availability`:** 
    Para que o cálculo de rotas e sugestões de redistribuição para as carrinhas funcione, o componente `fleet_redistribution` precisa de consultar diretamente e em tempo real o componente `station_availability`. Esta consulta exige uma resposta imediata e síncrona para conhecer quais as estações que têm défice ou excesso de bicicletas naquele preciso momento operacional.

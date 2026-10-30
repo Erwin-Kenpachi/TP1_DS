@@ -9,7 +9,6 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
-
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
@@ -178,6 +177,21 @@ public class ModularMonolithArchitectureTest {
                             "pt.ulisboa.lisboapedala.history_reader.."
                     )
                     .because("fleet_redistribution só pode usar station_availability (ARCHITECTURE.md seção 3)");
+
+    // 11. Allowed-to-Use: station_availability não pode depender de nenhum outro módulo de domínio
+    @ArchTest
+    public static final ArchRule station_availability_should_not_depend_on_other_domain_modules =
+            noClasses().that().resideInAPackage("pt.ulisboa.lisboapedala.station_availability..")
+                    .should().dependOnClassesThat().resideInAnyPackage(
+                            "pt.ulisboa.lisboapedala.dock_access..",
+                            "pt.ulisboa.lisboapedala.trip_lifecycle..",
+                            "pt.ulisboa.lisboapedala.tariff_billing..",
+                            "pt.ulisboa.lisboapedala.maintenance_orders..",
+                            "pt.ulisboa.lisboapedala.reporting_audit..",
+                            "pt.ulisboa.lisboapedala.fleet_redistribution..",
+                            "pt.ulisboa.lisboapedala.history_reader.."
+                    )
+                    .because("station_availability não pode usar nenhum outro módulo de domínio (03-particionamento-e-vistas.md seção 2.4 e ARCHITECTURE.md seção 3)");
 
     private static String extractModuleName(String packageName) {
         if (!packageName.startsWith(BASE_PACKAGE)) {

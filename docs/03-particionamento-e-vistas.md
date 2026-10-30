@@ -158,17 +158,17 @@ As responsabilidades são as seguintes:
 
 As dependências entre os módulos de domínio obedecem às seguintes regras restritivas (*Allowed-to-Use*):
 
-| Módulo Origem | Módulos Permitidos (*Allowed-to-Use*) | Módulos Proibidos |
+| Módulo Origem | Módulos Permitidos (*Allowed-to-Use*) | Módulos Proibidos (Regras ArchUnit) |
 | :--- | :--- | :--- |
-| `dock_access` | `trip_lifecycle`, `station_availability` | `tariff_billing`, `sensor_ingestion` |
-| `trip_lifecycle` | `tariff_billing` | `dock_access`, `station_availability`, `sensor_ingestion` |
-| `tariff_billing` | *(Nenhum)* | Todos os outros |
-| `station_availability` |`sensor_ingestion` | Todos os outros |
-| `sensor_ingestion` | *(Nenhum)* | Todos os outros |
-| `fleet_redistribution` | `station_availability` | Todos os outros|
-| `maintenance_orders` | `sensor_ingestion` | Todos os outros |
-| `history_reader` |  `tariff_billing`,`trip_lifecycle`| Todos os outros
-| `reporting_audit` | `trip_lifecycle` | Todos os outros |
+| `dock_access` | `trip_lifecycle`, `station_availability` | `tariff_billing`, `sensor_ingestion`, `maintenance_orders`, `reporting_audit`, `fleet_redistribution`, `history_reader` |
+| `trip_lifecycle` | `tariff_billing` | `dock_access`, `station_availability`, `sensor_ingestion`, `maintenance_orders`, `reporting_audit`, `fleet_redistribution`, `history_reader` |
+| `tariff_billing` | *(Nenhum — módulo folha)* | `dock_access`, `trip_lifecycle`, `station_availability`, `sensor_ingestion`, `maintenance_orders`, `reporting_audit`, `fleet_redistribution`, `history_reader` (Todos os outros) |
+| `station_availability` | `sensor_ingestion`| `dock_access`, `trip_lifecycle`, `tariff_billing`, `maintenance_orders`, `reporting_audit`, `fleet_redistribution`, `history_reader` (Todos os outros) |
+| `sensor_ingestion` | *(Nenhum — telemetria)* | `dock_access`, `trip_lifecycle`, `tariff_billing`, `station_availability`, `maintenance_orders`, `reporting_audit`, `fleet_redistribution`, `history_reader` (Todos os outros) |
+| `fleet_redistribution` | `station_availability` | `dock_access`, `trip_lifecycle`, `tariff_billing`, `sensor_ingestion`, `maintenance_orders`, `reporting_audit`, `history_reader` |
+| `maintenance_orders` | `sensor_ingestion` | `dock_access`, `trip_lifecycle`, `tariff_billing`, `station_availability`, `reporting_audit`, `fleet_redistribution`, `history_reader` |
+| `history_reader` | `trip_lifecycle`, `tariff_billing` | `dock_access`, `station_availability`, `sensor_ingestion`, `maintenance_orders`, `fleet_redistribution`, `reporting_audit` |
+| `reporting_audit` | `trip_lifecycle` | `dock_access`, `tariff_billing`, `station_availability`, `sensor_ingestion`, `maintenance_orders`, `fleet_redistribution`, `history_reader` |
 
 Estas regras serão transpostas para testes arquiteturais automáticos (*fitness functions* na pasta `tests/architecture/`) para impedir violações no código-fonte.
 
