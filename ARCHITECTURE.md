@@ -37,7 +37,7 @@ As regras seguintes são obrigatórias. Um módulo só pode depender dos módulo
 | `station_availability` | Nenhum outro módulo de domínio |
 | `maintenance_orders` | `sensor_ingestion` |
 | `fleet_redistribution` | `station_availability` |
-| `reporting_audit` | `trip_lifecycle`, `station_availability` (consultas de leitura) |
+| `reporting_audit` | `trip_lifecycle` (consultas de leitura) |
 | `history_reader` | `trip_lifecycle`, `tariff_billing` (consultas de leitura) |
 | `tariff_billing` | Nenhum outro módulo de domínio |
 | `sensor_ingestion` | Nenhum outro módulo de domínio |

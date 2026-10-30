@@ -5,8 +5,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import pt.ulisboa.lisboapedala.common.DatabaseManager;
 import pt.ulisboa.lisboapedala.reporting_audit.presentation.ReportController;
-import pt.ulisboa.lisboapedala.station_availability.StationAvailabilityFacade;
-import pt.ulisboa.lisboapedala.station_availability.StationOccupancyDTO;
 import pt.ulisboa.lisboapedala.tariff_billing.TariffBillingFacade;
 import pt.ulisboa.lisboapedala.trip_lifecycle.CompleteTripRequestDTO;
 import pt.ulisboa.lisboapedala.trip_lifecycle.StartTripRequestDTO;
@@ -21,7 +19,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ReportingAuditTest {
 
     private DatabaseManager databaseManager;
-    private StationAvailabilityFacade stationAvailabilityFacade;
     private TripLifecycleFacade tripLifecycleFacade;
     private ReportingAuditFacade reportingAuditFacade;
     private ReportController reportController;
@@ -29,16 +26,17 @@ class ReportingAuditTest {
     @BeforeEach
     void setUp() {
         databaseManager = DatabaseManager.createInMemory();
-        stationAvailabilityFacade = new StationAvailabilityFacade(databaseManager);
         TariffBillingFacade tariffBillingFacade = new TariffBillingFacade(databaseManager);
         tripLifecycleFacade = new TripLifecycleFacade(databaseManager, tariffBillingFacade);
-        reportingAuditFacade = new ReportingAuditFacade(databaseManager, tripLifecycleFacade, stationAvailabilityFacade);
+        
+        // reporting_audit depende EXCLUSIVAMENTE de tripLifecycleFacade (Ce = 1)
+        reportingAuditFacade = new ReportingAuditFacade(databaseManager, tripLifecycleFacade);
         reportController = new ReportController(reportingAuditFacade);
 
-        // Registar estações distribuídas por freguesias de Lisboa
-        stationAvailabilityFacade.registerStation(new StationOccupancyDTO("ST-SALDANHA", "Saldanha", "Avenidas Novas", 20, 10, 10));
-        stationAvailabilityFacade.registerStation(new StationOccupancyDTO("ST-CAMPO-GRANDE", "Campo Grande", "Alvalade", 25, 15, 10));
-        stationAvailabilityFacade.registerStation(new StationOccupancyDTO("ST-BELEM", "Torre de Belém", "Belém", 15, 5, 10));
+        // Registar estações distribuídas por freguesias de Lisboa no cadastro municipal
+        reportingAuditFacade.registerStation("ST-SALDANHA", "Saldanha", "Avenidas Novas", 20, 10, 10);
+        reportingAuditFacade.registerStation("ST-CAMPO-GRANDE", "Campo Grande", "Alvalade", 25, 15, 10);
+        reportingAuditFacade.registerStation("ST-BELEM", "Torre de Belém", "Belém", 15, 5, 10);
     }
 
     @Test
@@ -79,7 +77,6 @@ class ReportingAuditTest {
 
         TripDTO trip = tripLifecycleFacade.startTrip(new StartTripRequestDTO("TRIP-03", "USER-03", "BIKE-03", "ST-SALDANHA", t1));
         tripLifecycleFacade.completeTrip(new CompleteTripRequestDTO(trip.tripId(), "ST-SALDANHA", t2, "EVT-03", true, "MBWAY"));
-
 
         MonthlyMunicipalReportDTO monthlyReport = reportingAuditFacade.generateMonthlyReport(2026, 10);
 

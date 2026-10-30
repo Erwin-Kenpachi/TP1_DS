@@ -5,7 +5,6 @@ import pt.ulisboa.lisboapedala.reporting_audit.business.CarbonSavingsCalculator;
 import pt.ulisboa.lisboapedala.reporting_audit.business.ParishUsageAggregator;
 import pt.ulisboa.lisboapedala.reporting_audit.business.ReportGeneratorService;
 import pt.ulisboa.lisboapedala.reporting_audit.persistence.ReportRepository;
-import pt.ulisboa.lisboapedala.station_availability.StationAvailabilityFacade;
 import pt.ulisboa.lisboapedala.trip_lifecycle.TripLifecycleFacade;
 
 import java.util.Optional;
@@ -15,28 +14,32 @@ import java.util.Optional;
  * Único ponto de contacto público permitido para Gestores Municipais e auditores externos.
  *
  * Em conformidade com o ADR-002, ADR-005 e ARCHITECTURE.md:
- * Módulo periférico (I = 1.0) dependente exclusivamente, em modo de leitura, de:
+ * Módulo periférico (I = 1.0, Ce = 1) dependente exclusivamente, em modo de leitura, de:
  * - TripLifecycleFacade
- * - StationAvailabilityFacade
  */
 public class ReportingAuditFacade {
 
     private final ReportGeneratorService service;
 
     public ReportingAuditFacade(DatabaseManager databaseManager,
-                                TripLifecycleFacade tripLifecycleFacade,
-                                StationAvailabilityFacade stationAvailabilityFacade) {
+                                TripLifecycleFacade tripLifecycleFacade) {
         databaseManager.executeScriptFromClasspath("/pt/ulisboa/lisboapedala/reporting_audit/persistence/schema.sql");
         ReportRepository repository = new ReportRepository(databaseManager);
         CarbonSavingsCalculator carbonCalculator = new CarbonSavingsCalculator();
         ParishUsageAggregator parishAggregator = new ParishUsageAggregator(carbonCalculator);
         this.service = new ReportGeneratorService(
                 tripLifecycleFacade,
-                stationAvailabilityFacade,
                 carbonCalculator,
                 parishAggregator,
                 repository
         );
+    }
+
+    /**
+     * Regista ou atualiza os metadados territoriais de uma estação no cadastro de auditoria municipal.
+     */
+    public void registerStation(String stationId, String name, String parish, int totalDocks, int availableBikes, int freeDocks) {
+        service.registerStation(stationId, name, parish, totalDocks, availableBikes, freeDocks);
     }
 
     /**

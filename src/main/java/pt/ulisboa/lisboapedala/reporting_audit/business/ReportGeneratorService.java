@@ -4,13 +4,10 @@ import pt.ulisboa.lisboapedala.reporting_audit.MonthlyMunicipalReportDTO;
 import pt.ulisboa.lisboapedala.reporting_audit.ParishUsageReportDTO;
 import pt.ulisboa.lisboapedala.reporting_audit.StationOpenDataDTO;
 import pt.ulisboa.lisboapedala.reporting_audit.persistence.ReportRepository;
-import pt.ulisboa.lisboapedala.station_availability.StationAvailabilityFacade;
-import pt.ulisboa.lisboapedala.station_availability.StationOccupancyDTO;
 import pt.ulisboa.lisboapedala.trip_lifecycle.TripDTO;
 import pt.ulisboa.lisboapedala.trip_lifecycle.TripLifecycleFacade;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -19,33 +16,54 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Serviço central de agregação analítica e geração de relatórios municipais.
- * Consome estritamente através das fachadas públicas permitidas (TripLifecycleFacade e StationAvailabilityFacade).
+ * Consome estritamente através da fachada pública permitida (TripLifecycleFacade),
+ * em total conformidade com a regra Allowed-to-Use (Ce = 1).
  */
 public class ReportGeneratorService {
 
+    public record MunicipalStationRecord(
+            String stationId,
+            String name,
+            String parish,
+            int totalDocks,
+            int availableBikes,
+            int freeDocks
+    ) {}
+
+    private static final Map<String, String> DEFAULT_PARISH_MAP = Map.of(
+            "ST-01", "Misericordia",
+            "ST-02", "Avenidas Novas",
+            "ST-03", "Santa Maria Maior",
+            "ST-04", "Belem",
+            "ST-05", "Santo Antonio",
+            "ST-06", "Arroios"
+    );
+
     private final TripLifecycleFacade tripLifecycleFacade;
-    private final StationAvailabilityFacade stationAvailabilityFacade;
     private final CarbonSavingsCalculator carbonCalculator;
     private final ParishUsageAggregator parishAggregator;
     private final ReportRepository reportRepository;
+    private final Map<String, MunicipalStationRecord> municipalStations = new ConcurrentHashMap<>();
 
     public ReportGeneratorService(TripLifecycleFacade tripLifecycleFacade,
-                                  StationAvailabilityFacade stationAvailabilityFacade,
                                   CarbonSavingsCalculator carbonCalculator,
                                   ParishUsageAggregator parishAggregator,
                                   ReportRepository reportRepository) {
         this.tripLifecycleFacade = tripLifecycleFacade;
-        this.stationAvailabilityFacade = stationAvailabilityFacade;
         this.carbonCalculator = carbonCalculator;
         this.parishAggregator = parishAggregator;
         this.reportRepository = reportRepository;
     }
 
+    public void registerStation(String stationId, String name, String parish, int totalDocks, int availableBikes, int freeDocks) {
+        municipalStations.put(stationId, new MunicipalStationRecord(stationId, name, parish, totalDocks, availableBikes, freeDocks));
+    }
+
     public ParishUsageReportDTO generateParishUsageReport() {
-        // Consulta todas as viagens concluídas até ao momento presente
         LocalDateTime start = LocalDateTime.of(2000, 1, 1, 0, 0);
         LocalDateTime end = LocalDateTime.now().plusDays(1);
         List<TripDTO> trips = tripLifecycleFacade.getCompletedTripsBetween(start, end);
@@ -99,13 +117,12 @@ public class ReportGeneratorService {
     }
 
     public StationOpenDataDTO getStationOpenData() {
-        List<StationOccupancyDTO> stations = stationAvailabilityFacade.getAllStations();
         List<StationOpenDataDTO.StationOpenDataRecord> records = new ArrayList<>();
 
         int totalBikes = 0;
         int totalDocks = 0;
 
-        for (StationOccupancyDTO station : stations) {
+        for (MunicipalStationRecord station : municipalStations.values()) {
             totalBikes += station.availableBikes();
             totalDocks += station.freeDocks();
 
@@ -126,7 +143,7 @@ public class ReportGeneratorService {
 
         return new StationOpenDataDTO(
                 Instant.now(),
-                stations.size(),
+                municipalStations.size(),
                 totalBikes,
                 totalDocks,
                 records
@@ -134,9 +151,8 @@ public class ReportGeneratorService {
     }
 
     private Map<String, String> buildStationParishMap() {
-        Map<String, String> map = new HashMap<>();
-        List<StationOccupancyDTO> stations = stationAvailabilityFacade.getAllStations();
-        for (StationOccupancyDTO st : stations) {
+        Map<String, String> map = new HashMap<>(DEFAULT_PARISH_MAP);
+        for (MunicipalStationRecord st : municipalStations.values()) {
             map.put(st.stationId(), st.parish());
         }
         return map;

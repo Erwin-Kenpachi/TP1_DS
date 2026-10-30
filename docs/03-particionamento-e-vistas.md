@@ -162,15 +162,15 @@ As dependências entre os módulos de domínio obedecem às seguintes regras res
 | :--- | :--- | :--- |
 | `dock_access` | `trip_lifecycle`, `station_availability` | `tariff_billing`, `sensor_ingestion` |
 | `trip_lifecycle` | `tariff_billing` | `dock_access`, `station_availability`, `sensor_ingestion` |
-| `tariff_billing` | *(Nenhum — módulo folha)* | Todos os outros |
+| `tariff_billing` | *(Nenhum)* | Todos os outros |
 | `station_availability` |`sensor_ingestion` | Todos os outros |
-| `sensor_ingestion` | *(Nenhum)* | `trip_lifecycle`, `tariff_billing` |
-| `fleet_redistribution` | `station_availability` | `trip_lifecycle`, `tariff_billing` |
-| `maintenance_orders` | `sensor_ingestion` | Módulos de negócio crítico |
+| `sensor_ingestion` | *(Nenhum)* | Todos os outros |
+| `fleet_redistribution` | `station_availability` | Todos os outros|
+| `maintenance_orders` | `sensor_ingestion` | Todos os outros |
 | `history_reader` |  `tariff_billing`,`trip_lifecycle`| Todos os outros
-| `reporting_audit` | Todos os módulos de leitura (em modo de agregação) | Modificação direta de estado |
+| `reporting_audit` | `trip_lifecycle` | Todos os outros |
 
-Estas regras serão transpostas para testes arquiteturais automáticos (*fitness functions* na pasta `tests/architecture/`) para impedir violações no código-fonte[cite: 7].
+Estas regras serão transpostas para testes arquiteturais automáticos (*fitness functions* na pasta `tests/architecture/`) para impedir violações no código-fonte.
 
 
 ## 3. Vista de Módulos e Regras Allowed-to-Use
