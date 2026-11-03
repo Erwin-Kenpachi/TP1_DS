@@ -48,7 +48,7 @@ O projeto contém documentação arquitetural exaustiva organizada na raiz e na 
 | [`docs/01-caracteristicas.md`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/docs/01-caracteristicas.md) | Levantamento das características de qualidade implícitas e explícitas do enunciado, com definição detalhada dos cenários concretos do **Top 3** (Robustez, Elasticidade a Pedido, Disponibilidade). |
 | [`docs/02-componentes.md`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/docs/02-componentes.md) | Descrição dos componentes lógicos consolidados, mapeamento face às User Stories e análise de coesão, conascência e métricas de acoplamento/instabilidade ($I$). |
 | [`docs/03-particionamento-e-vistas.md`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/docs/03-particionamento-e-vistas.md) | Comparação entre particionamento em camadas vs. domínio, **Vista de Módulos** detalhada com a árvore de ficheiros, **Vista C&C** (fluxo Desbloquear-Devolver-Cobrar) e **Vista de Alocação**. |
-| [`docs/reflexao.md`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/docs/reflexao.md) | **Relatório de Reflexão Arquitetural:** análise crítica sobre o uso de IA, 4 casos documentados de violações arquiteturais geradas e avaliação das forças e ângulos mortos das *fitness functions*. |
+| [`docs/reflexao.md`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/docs/reflexao.md) | **Relatório de Reflexão Arquitetural:** análise crítica sobre o uso de IA, 5 casos documentados de violações arquiteturais geradas e avaliação das forças e ângulos mortos das *fitness functions*. |
 | [`docs/adr/`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/docs/adr/) | **Architecture Decision Records (ADRs):**<br>• `ADR-001`: Decomposição histórica inicial fina (substituída).<br>• `ADR-002`: Consolidação em 9 componentes lógicos de domínio.<br>• `ADR-003`: Monólito modular com unidade de implantação única em SQLite.<br>• `ADR-004`: Resiliência perante falhas de rede, buffer 24h e idempotência.<br>• `ADR-005`: Fachadas públicas e fitness functions ArchUnit.<br>• `ADR-006`: Isolamento de dados por módulo e retenção fiscal de 10 anos. |
 | [`docs/diagramas/`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/docs/diagramas/) | Diagramas visuais C4 (Contexto, Contentores e Componentes) e especificações PlantUML/Mermaid correspondentes. |
 | [`prompts/`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/prompts/) | Histórico de prompts executados e os respetivos relatórios de validação arquitetural para cada módulo implementado (Prompts 1 a 8). |
@@ -143,7 +143,7 @@ O projeto inclui o wrapper Maven (`mvnw.cmd` para Windows ou `./mvnw` para Unix)
 ./mvnw test
 ```
 
-> **Verificação:** A execução cobre 38 testes com 0 falhas, incluindo as 10 regras arquiteturais de [`ModularMonolithArchitectureTest`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/tests/architecture/ModularMonolithArchitectureTest.java), validação de ausência de ciclos e testes de idempotência offline (`US1IdempotencyAndOfflineSyncTest`).
+> **Verificação:** A execução cobre 39 testes com 0 falhas, incluindo as 11 regras arquiteturais de [`ModularMonolithArchitectureTest`](file:///c:/FCUL/1%20semestre/DS/TP1_DS/tests/architecture/ModularMonolithArchitectureTest.java), validação de ausência de ciclos e testes de idempotência offline (`US1IdempotencyAndOfflineSyncTest`).
 
 ### Executar a Aplicação Interativa: `LisboaPedalaApp`
 
@@ -170,17 +170,22 @@ Em alternativa, pode ser iniciada através do wrapper Maven:
 ---
 
 ### Funcionalidades Disponíveis na `LisboaPedalaApp`
-Ao executar o programa, a consola disponibiliza um menu completo de demonstração:
-1. **Autenticação Segura (Ecrã Inicial):**
-   - Registo de novo utilizador (perfil assinante com passe ou utilizador ocasional, com hashing de credenciais).
-   - Login para restaurar o perfil ativo a partir da base de dados SQLite.
+Ao executar o programa, a consola disponibiliza um menu completo de demonstração adaptado ao perfil do utilizador autenticado:
+1. **Autenticação Segura e Perfis (Ecrã Inicial):**
+   - Registo de conta como **Ciclista**, **Técnico de Manutenção** ou **Gestor Municipal** (com credenciais salvas em SQLite).
+   - Login por credenciais (conta pré-configurada de gestor: `gestor` / `gestor`).
 2. **Menu Principal do Ciclista (US-1 e US-8):**
    - **Desbloquear Bicicleta:** Seleção de estação e bicicleta, validação transacional e início da viagem.
    - **Devolver Bicicleta:** Encaixe físico na doca de destino, cálculo exato da duração e faturação imediata.
    - **Consultar Mapa de Estações:** Ocupação em tempo real de bicicletas disponíveis e docas livres (`station_availability`).
    - **Histórico e Recibos Fiscais:** Consulta unificada das viagens realizadas e recibos fiscais com link da AT (`history_reader`).
-3. **Menu de Gestão e Operações Técnicas (US-2 e US-4):**
+3. **Painel de Campo do Técnico de Manutenção (US-2):**
    - **Telemetria de Sensores:** Envio de pings IoT e reporte de anomalias técnicas (`sensor_ingestion`).
-   - **Ordens de Manutenção:** Acompanhamento e resolução de tickets pela equipa de técnicos (`maintenance_orders`).
-   - **Relatórios Municipais:** Emissão de relatórios de utilização por freguesia de Lisboa, estimativa de CO₂ poupado face ao automóvel e publicação de métricas para o portal de dados abertos (`reporting_audit`).
+   - **Ordens de Manutenção:** Pool geral de avarias ativas e conclusão de reparações (`maintenance_orders`).
+4. **Painel de Gestão Municipal — Gestor (US-4):**
+   - **Relatório de Utilização por Freguesia:** Visualização agregada de viagens iniciadas e terminadas por freguesia de Lisboa, duração total e CO₂ poupado face ao automóvel (`reporting_audit`).
+
+## Link do GitHub
+https://github.com/Erwin-Kenpachi/TP1_DS.git
+
 

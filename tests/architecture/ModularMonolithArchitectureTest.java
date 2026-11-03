@@ -178,7 +178,7 @@ public class ModularMonolithArchitectureTest {
                     )
                     .because("fleet_redistribution só pode usar station_availability (ARCHITECTURE.md seção 3)");
 
-    // 11. Allowed-to-Use: station_availability não pode depender de nenhum outro módulo de domínio
+    // 11. Allowed-to-Use: station_availability não pode depender de nenhum outro módulo de domínio sem ser o senssor
     @ArchTest
     public static final ArchRule station_availability_should_not_depend_on_other_domain_modules =
             noClasses().that().resideInAPackage("pt.ulisboa.lisboapedala.station_availability..")

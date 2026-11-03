@@ -48,7 +48,7 @@ public class UserRepository {
     }
 
     /**
-     * Regista um novo utilizador com tipo específico (ex: "CYCLIST" ou "TECHNICIAN").
+     * Regista um novo utilizador com tipo específico (ex: "CYCLIST", "TECHNICIAN" ou "MANAGER").
      */
     public boolean register(String userId, String username, String password, boolean isSubscriber, String paymentMethod, String userType) {
         String type = (userType != null && !userType.isBlank()) ? userType.toUpperCase() : "CYCLIST";
@@ -142,6 +142,10 @@ public class UserRepository {
 
         public boolean isTechnician() {
             return "TECHNICIAN".equalsIgnoreCase(userType) || "TECNICO".equalsIgnoreCase(userType);
+        }
+
+        public boolean isManager() {
+            return "MANAGER".equalsIgnoreCase(userType) || "GESTOR".equalsIgnoreCase(userType);
         }
     }
 }

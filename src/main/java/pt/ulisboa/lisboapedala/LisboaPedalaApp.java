@@ -13,6 +13,9 @@ import pt.ulisboa.lisboapedala.history_reader.presentation.HistoryController;
 import pt.ulisboa.lisboapedala.maintenance_orders.MaintenanceOrderDTO;
 import pt.ulisboa.lisboapedala.maintenance_orders.MaintenanceOrdersFacade;
 import pt.ulisboa.lisboapedala.maintenance_orders.presentation.MaintenanceController;
+import pt.ulisboa.lisboapedala.reporting_audit.ParishUsageReportDTO;
+import pt.ulisboa.lisboapedala.reporting_audit.ReportingAuditFacade;
+import pt.ulisboa.lisboapedala.reporting_audit.presentation.ReportController;
 import pt.ulisboa.lisboapedala.sensor_ingestion.BikeHealthStatusDTO;
 import pt.ulisboa.lisboapedala.sensor_ingestion.SensorIngestionFacade;
 import pt.ulisboa.lisboapedala.sensor_ingestion.presentation.TelemetryController;
@@ -54,6 +57,8 @@ public class LisboaPedalaApp {
     private final TelemetryController telemetryController;
     private final MaintenanceOrdersFacade maintenanceFacade;
     private final MaintenanceController maintenanceController;
+    private final ReportingAuditFacade reportingFacade;
+    private final ReportController reportController;
     private final Scanner scanner;
 
     /** Utilizador autenticado na sessao actual. */
@@ -71,6 +76,7 @@ public class LisboaPedalaApp {
         HistoryReaderFacade historyFacade = new HistoryReaderFacade(tripFacade, billingFacade);
         SensorIngestionFacade sensorFacade = new SensorIngestionFacade(dbManager);
         MaintenanceOrdersFacade maintenanceFacade = new MaintenanceOrdersFacade(dbManager, sensorFacade);
+        ReportingAuditFacade reportingFacade = new ReportingAuditFacade(dbManager, tripFacade);
 
         this.stationController = new StationController(stationFacade);
         this.dockController = new DockController(dockFacade);
@@ -81,9 +87,13 @@ public class LisboaPedalaApp {
         this.telemetryController = new TelemetryController(sensorFacade);
         this.maintenanceFacade = maintenanceFacade;
         this.maintenanceController = new MaintenanceController(maintenanceFacade);
+        this.reportingFacade = reportingFacade;
+        this.reportController = new ReportController(reportingFacade);
         this.scanner = new Scanner(System.in);
 
         seedStationsIfNeeded(stationFacade);
+        registerMunicipalStations(reportingFacade);
+        seedDefaultAccountsIfNeeded();
     }
 
     /**
@@ -100,6 +110,27 @@ public class LisboaPedalaApp {
         stationController.registerStation("ST-04", "Belem",              "Belem",             15, 2, 13);
         stationController.registerStation("ST-05", "Marques de Pombal",  "Santo Antonio",     10, 5,  5);
         stationController.registerStation("ST-06", "Intendente",         "Arroios",           10, 3,  7);
+    }
+
+    /**
+     * Regista os metadados das estacoes no cadastro de relatórios municipais.
+     */
+    private void registerMunicipalStations(ReportingAuditFacade reportingFacade) {
+        reportingFacade.registerStation("ST-01", "Cais do Sodre",     "Misericordia",      10, 6,  4);
+        reportingFacade.registerStation("ST-02", "Saldanha",           "Avenidas Novas",    12, 3,  9);
+        reportingFacade.registerStation("ST-03", "Rossio",             "Santa Maria Maior",  8, 4,  4);
+        reportingFacade.registerStation("ST-04", "Belem",              "Belem",             15, 2, 13);
+        reportingFacade.registerStation("ST-05", "Marques de Pombal",  "Santo Antonio",     10, 5,  5);
+        reportingFacade.registerStation("ST-06", "Intendente",         "Arroios",           10, 3,  7);
+    }
+
+    /**
+     * Inicializa conta de demonstração para Gestor Municipal se não existir.
+     */
+    private void seedDefaultAccountsIfNeeded() {
+        if (!userRepository.usernameExists("gestor")) {
+            userRepository.register("MGR-001", "gestor", "gestor", false, "MBWAY", "MANAGER");
+        }
     }
 
     public static void main(String[] args) {
@@ -122,6 +153,8 @@ public class LisboaPedalaApp {
         while (running) {
             if (currentUser.isTechnician()) {
                 running = handleTechnicianMenu();
+            } else if (currentUser.isManager()) {
+                running = handleManagerMenu();
             } else {
                 running = handleCyclistMenu();
             }
@@ -166,6 +199,8 @@ public class LisboaPedalaApp {
         currentUser = profileOpt.get();
         if (currentUser.isTechnician()) {
             System.out.println("\nBem-vindo(a), Técnico(a) " + currentUser.username() + "!  [Painel de Manutenção]");
+        } else if (currentUser.isManager()) {
+            System.out.println("\nBem-vindo(a), Gestor(a) " + currentUser.username() + "!  [Painel de Gestão Municipal]");
         } else {
             System.out.println("\nBem-vindo(a), " + currentUser.username() + "!"
                     + (currentUser.isSubscriber() ? "  [Assinante Passe Anual]" : "  [Utilizador Ocasional]"));
@@ -206,15 +241,29 @@ public class LisboaPedalaApp {
         System.out.println("\nTipo de conta:");
         System.out.println("  [1] Ciclista (Cliente / Assinante)");
         System.out.println("  [2] Técnico de Manutenção (US-2)");
+        System.out.println("  [3] Gestor Municipal (US-4 / Relatórios)");
         System.out.print("Escolhe o tipo (default: 1): ");
         String roleInput = scanner.nextLine().trim();
-        String userType = roleInput.equals("2") ? "TECHNICIAN" : "CYCLIST";
+        String userType = switch (roleInput) {
+            case "2" -> "TECHNICIAN";
+            case "3" -> "MANAGER";
+            default  -> "CYCLIST";
+        };
 
-        String prefix = userType.equals("TECHNICIAN") ? "TECH-" : "USER-";
+        String prefix = switch (userType) {
+            case "TECHNICIAN" -> "TECH-";
+            case "MANAGER"    -> "MGR-";
+            default           -> "USER-";
+        };
         String userId = prefix + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         boolean ok = userRepository.register(userId, username, password, isSubscriber, payMethod, userType);
         if (ok) {
-            System.out.println("Conta criada com sucesso (" + (userType.equals("TECHNICIAN") ? "Técnico" : "Ciclista") + ")! Já podes iniciar sessão.");
+            String roleName = switch (userType) {
+                case "TECHNICIAN" -> "Técnico";
+                case "MANAGER"    -> "Gestor";
+                default           -> "Ciclista";
+            };
+            System.out.println("Conta criada com sucesso (" + roleName + ")! Já podes iniciar sessão.");
         } else {
             System.out.println("Erro ao criar conta. Tenta novamente.");
         }
@@ -271,7 +320,7 @@ public class LisboaPedalaApp {
     }
 
     // -------------------------------------------------------------------------
-    // Opcoes do menu
+    // Opcoes do menu Ciclista
     // -------------------------------------------------------------------------
 
     private void listStations() {
@@ -540,6 +589,70 @@ public class LisboaPedalaApp {
         System.out.printf("| Validacao AT: %-44s |%n", inv.atFiscalCode());
         System.out.println("| Retencao:     10 anos garantidos (ADR-006)                  |");
         System.out.println("+-------------------------------------------------------------+");
+    }
+
+    // -------------------------------------------------------------------------
+    // Painel e Operações do Gestor Municipal (US-4)
+    // -------------------------------------------------------------------------
+
+    private boolean handleManagerMenu() {
+        System.out.println("\n================================================================================");
+        System.out.println("             PAINEL DE GESTÃO MUNICIPAL - GESTOR (US-4 / AUDITORIA)             ");
+        System.out.println(" Sessão: " + currentUser.username() + "  |  Gestor Municipal");
+        System.out.println("================================================================================");
+        System.out.println(" [1] Ver relatório de utilização por freguesia");
+        System.out.println(" [0] Terminar sessão");
+        System.out.print("Escolhe uma opção: ");
+
+        String option = scanner.nextLine().trim();
+        switch (option) {
+            case "1" -> handleViewParishUsageReport();
+            case "0" -> {
+                System.out.println("\nSessão de gestor terminada. Até à próxima, " + currentUser.username() + "!");
+                return false;
+            }
+            default -> System.out.println("Opção inválida. Por favor escolhe uma das opções do menu.");
+        }
+        return true;
+    }
+
+    private void handleViewParishUsageReport() {
+        System.out.println("\n--- RELATÓRIO DE UTILIZAÇÃO POR FREGUESIA (US-4 - reporting_audit) ---");
+        ParishUsageReportDTO report = reportController.getParishUsageReport();
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(java.time.ZoneId.systemDefault());
+        String formattedDate = report.generatedAt() != null ? dtf.format(report.generatedAt()) : "N/A";
+
+        System.out.println("========================================================================================================");
+        System.out.println("                         RELATÓRIO MUNICIPAL DE UTILIZAÇÃO POR FREGUESIA                                ");
+        System.out.printf(" Gerado em: %-19s | Total Viagens: %-5d | Duração: %-8s | CO2 Poupado: %-10s%n",
+                formattedDate,
+                report.totalTrips(),
+                report.totalDurationMinutes() + " min",
+                String.format("%.2f kg", report.totalCo2SavedKg()));
+        System.out.println("========================================================================================================");
+
+        if (report.parishStats() == null || report.parishStats().isEmpty()) {
+            System.out.println("Ainda não existem viagens concluídas registadas no sistema para agregar por freguesia.");
+            System.out.println("--------------------------------------------------------------------------------------------------------");
+            return;
+        }
+
+        System.out.println("+----------------------+-----------------+---------------+---------------------+------------------------+");
+        System.out.printf("| %-20s | %-15s | %-13s | %-19s | %-22s |%n",
+                "Freguesia", "Viagens Início", "Viagens Fim", "Duração Total (min)", "CO2 Poupado Estimado");
+        System.out.println("+----------------------+-----------------+---------------+---------------------+------------------------+");
+
+        for (ParishUsageReportDTO.ParishStatRecord stat : report.parishStats()) {
+            System.out.printf("| %-20s | %15d | %13d | %19d | %20.2f kg |%n",
+                    stat.parish(),
+                    stat.tripsStarted(),
+                    stat.tripsEnded(),
+                    stat.totalDurationMinutes(),
+                    stat.estimatedCo2SavedKg());
+        }
+        System.out.println("+----------------------+-----------------+---------------+---------------------+------------------------+");
+        System.out.println("Nota: Agregação anónima sem PII e métricas calculadas em conformidade com ADR-006 (RGPD).");
     }
 
     // -------------------------------------------------------------------------
